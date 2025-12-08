@@ -14,16 +14,18 @@ import (
 	"github.com/guatom999/self-boardcast/internal/handlers"
 	"github.com/guatom999/self-boardcast/internal/repositories"
 	"github.com/guatom999/self-boardcast/internal/services"
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 type Server struct {
+	db   *sqlx.DB
 	echo *echo.Echo
 	cfg  *config.Config
 }
 
-func NewServer(cfg *config.Config) *Server {
+func NewServer(db *sqlx.DB, cfg *config.Config) *Server {
 	e := echo.New()
 
 	e.Use(middleware.Logger())
@@ -31,9 +33,22 @@ func NewServer(cfg *config.Config) *Server {
 	e.Use(middleware.CORS())
 
 	return &Server{
+		db:   db,
 		echo: e,
 		cfg:  cfg,
 	}
+}
+
+func (s *Server) WaterModules() {
+	repo := repositories.NewWaterLevelRepository(s.db)
+	service := services.NewWaterLevelService(repo)
+	handler := handlers.NewMapHandler(service)
+
+	s.echo.GET("/heath", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, "OK")
+	})
+
+	s.echo.GET("/markers", handler.GetMapMarkers)
 }
 
 func (s *Server) Start() error {
@@ -43,15 +58,7 @@ func (s *Server) Start() error {
 		}
 	}()
 
-	repo := repositories.NewWaterLevelRepository()
-	service := services.NewWaterLevelService(repo)
-	handler := handlers.NewMapHandler(service)
-
-	s.echo.GET("/heath", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, "OK")
-	})
-
-	s.echo.GET("/markers", handler.GetMapMarkers)
+	s.WaterModules()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)

@@ -15,10 +15,9 @@ type waterLevelService struct {
 }
 
 type WaterLevelServiceInterface interface {
-	GetLatest(ctx context.Context) (*models.WaterLevel, error)
-	GetHistory(ctx context.Context, limit int) ([]*models.WaterLevel, error)
 	ProcessImage(ctx context.Context, imageURL string) (*models.WaterLevel, error)
 	GetByID(ctx context.Context, id string) (*models.WaterLevel, error)
+	GetAllLocations(ctx context.Context, limit int) (*models.MapMarkerResponse, error)
 }
 
 // NewWaterLevelService creates new service
@@ -28,24 +27,10 @@ func NewWaterLevelService(repo repositories.WaterLevelRepositoryInterface) Water
 	}
 }
 
-// GetLatest returns latest water level
-func (s *waterLevelService) GetLatest(ctx context.Context) (*models.WaterLevel, error) {
-	return s.repo.GetLatest(ctx)
+func (s *waterLevelService) GetAllLocations(ctx context.Context, limit int) (*models.MapMarkerResponse, error) {
+	return s.repo.GetAll(ctx, limit)
 }
 
-// GetHistory returns water level history
-func (s *waterLevelService) GetHistory(ctx context.Context, limit int) ([]*models.WaterLevel, error) {
-	if limit <= 0 {
-		limit = 10
-	}
-	if limit > 100 {
-		limit = 100
-	}
-	// return s.repo.GetAll(ctx, limit)
-	return nil, nil
-}
-
-// ProcessImage processes image and creates water level record
 func (s *waterLevelService) ProcessImage(ctx context.Context, imageURL string) (*models.WaterLevel, error) {
 	// TODO: Call Python service to analyze image
 	// Mock water level for now
