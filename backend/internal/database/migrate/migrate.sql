@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS water_levels (
     id            BIGSERIAL PRIMARY KEY,
     location_id   BIGINT NOT NULL,
     level_cm      NUMERIC(10,2) NOT NULL,      
+    image         VARCHAR(255),                 
     danger        danger_level NOT NULL,       
     is_flooded    BOOLEAN NOT NULL,           
     source        VARCHAR(50),                

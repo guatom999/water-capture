@@ -100,3 +100,6 @@ debug
 # Backup files
 *.bak
 *.backup
+
+public/
+uploads/
