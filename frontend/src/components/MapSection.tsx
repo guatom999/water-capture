@@ -39,6 +39,8 @@ const MapSection = () => {
         fetchMapData();
     }, []);
 
+    console.log("mapData", mapData)
+
     if (loading) {
         return (
             <section className="bg-gray-50 w-full h-screen flex items-center justify-center">
@@ -59,8 +61,9 @@ const MapSection = () => {
         <section className="bg-gray-50 w-full h-screen relative">
             <div className='w-full h-full'>
                 <MapContainer
-                    center={[mapData.center.latitude, mapData.center.longitude]}
-                    zoom={mapData.zoom}
+                    // center={[mapData.Markers[0].Latitude, mapData.Markers[0].Longitude]}
+                    center={[13.7567, 100.5115]}
+                    zoom={6}
                     scrollWheelZoom={true}
                     style={{ height: '100%', width: '100%' }}
                 >
@@ -70,12 +73,12 @@ const MapSection = () => {
                     />
 
                     {mapData.markers.map((marker) => (
-                        <Marker key={marker.id} position={[marker.latitude, marker.longitude]}>
+                        <Marker key={marker.LocationID} position={[marker.Latitude, marker.Longitude]}>
                             <Popup>
-                                <div className="font-bold">{marker.title}</div>
-                                <div className="whitespace-pre-line">{marker.description}</div>
+                                <div className="font-bold">{marker.LocationName}</div>
+                                <div className="whitespace-pre-line">{marker.Note}</div>
                                 <div className="text-sm text-gray-600 mt-2">
-                                    Level: {marker.level}m
+                                    Level: {marker.LevelCm} cm
                                 </div>
                             </Popup>
                         </Marker>
