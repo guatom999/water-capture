@@ -12,6 +12,7 @@ type (
 	Config struct {
 		Server   Server
 		Database Database
+		App      App
 	}
 
 	Server struct {
@@ -25,6 +26,12 @@ type (
 		Password string
 		DBName   string
 		SSLMode  string
+	}
+
+	App struct {
+		BaseURL            string
+		UploadDir          string
+		ImageProcessingDir string
 	}
 )
 
@@ -52,6 +59,17 @@ func LoadConfig(path string) *Config {
 			Password: os.Getenv("DB_PASSWORD"),
 			DBName:   os.Getenv("DB_NAME"),
 			SSLMode:  os.Getenv("DB_SSLMODE"),
+		},
+		App: App{
+			BaseURL: func() string {
+				url := os.Getenv("BASE_URL")
+				if url == "" {
+					return "http://localhost:8080"
+				}
+				return url
+			}(),
+			UploadDir:          os.Getenv("UPLOAD_DIR"),
+			ImageProcessingDir: os.Getenv("IMAGE_PROCESSING_DIR"),
 		},
 	}
 }

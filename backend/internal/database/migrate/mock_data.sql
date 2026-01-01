@@ -38,3 +38,7 @@ INSERT INTO locations (name, description, latitude, longitude, is_active) VALUES
 
 -- Eastern Thailand
 ('สถานีวัดระดับน้ำ ชลบุรี', 'สถานีตรวจวัดระดับน้ำคลองบางปะกง จ.ชลบุรี', 13.361200, 100.984800, TRUE);
+
+INSERT INTO water_levels (location_id, level_cm, danger, is_flooded, source, measured_at, note) VALUES
+(1, 125.50, 'WATCH', FALSE, 'sensor_001', '2025-12-23 08:00:00+07', 'just mock data'),
+(28, 170, 'SAFE', TRUE, 'sensor_001', '2025-12-23 08:15:00+07', 'just mock data');

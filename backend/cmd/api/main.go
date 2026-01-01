@@ -8,7 +8,7 @@ import (
 
 func main() {
 
-	cfg := config.LoadConfig(".env")
+	cfg := config.LoadConfig("../../.env")
 
 	db := database.DatabaseConnect(cfg)
 

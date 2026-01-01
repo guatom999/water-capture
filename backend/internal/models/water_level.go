@@ -13,6 +13,16 @@ type Location struct {
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
 
+type CreateWaterLevelReq struct {
+	LocationID int64     `json:"location_id"`
+	LevelCm    float64   `json:"level_cm"`
+	Image      string    `json:"image"`
+	Danger     string    `json:"danger"`
+	IsFlooded  bool      `json:"is_flooded"`
+	MeasuredAt time.Time `json:"measured_at"`
+	Note       string    `json:"note"`
+}
+
 type WaterLevel struct {
 	ID         string    `json:"id"`
 	ImageURL   string    `json:"image_url"`
@@ -21,12 +31,6 @@ type WaterLevel struct {
 	DetectedAt time.Time `json:"detected_at"`
 	CreatedAt  time.Time `json:"created_at"`
 }
-
-// type C struct {
-// 	Name      string  `json:"name"`
-// 	Latitude  float64 `json:"latitude"`
-// 	Longitude float64 `json:"longitude"`
-// }
 
 type MapMarker struct {
 	ID          string    `json:"id"`
@@ -56,4 +60,26 @@ type MapMarkers struct {
 	Latitude    float64 `json:"latitude"`
 	Longitude   float64 `json:"longitude"`
 	Description string  `json:"description"`
+}
+
+type PredictWater struct {
+	FileName   string  `json:"file_name"`
+	WaterLevel float64 `json:"water_level"`
+}
+
+type LocationWithWaterLevel struct {
+	LocationID          int64   `db:"location_id"`
+	LocationName        string  `db:"location_name"`
+	LocationDescription string  `db:"location_description"`
+	Latitude            float64 `db:"latitude"`
+	Longitude           float64 `db:"longitude"`
+	IsActive            bool    `db:"is_active"`
+
+	WaterLevelID *int64     `db:"water_level_id"`
+	LevelCm      *float64   `db:"level_cm"`
+	Image        *string    `db:"image"`
+	Danger       *string    `db:"danger"`
+	IsFlooded    *bool      `db:"is_flooded"`
+	MeasuredAt   *time.Time `db:"measured_at"`
+	Note         *string    `db:"note"`
 }

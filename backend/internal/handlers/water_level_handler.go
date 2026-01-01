@@ -34,6 +34,8 @@ func (h *waterLevelHandler) GetMapMarkers(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusOK, markers)
+	return c.JSON(http.StatusOK, map[string]any{
+		"markers": markers,
+	})
 
 }

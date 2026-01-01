@@ -31,6 +31,7 @@ func NewServer(db *sqlx.DB, cfg *config.Config) *Server {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
+	// e.Use(middleware.SecurityHeaders())
 
 	return &Server{
 		db:   db,
@@ -41,7 +42,7 @@ func NewServer(db *sqlx.DB, cfg *config.Config) *Server {
 
 func (s *Server) WaterModules() {
 	repo := repositories.NewWaterLevelRepository(s.db)
-	service := services.NewWaterLevelService(repo)
+	service := services.NewWaterLevelService(repo, s.cfg.App.BaseURL, s.cfg)
 	handler := handlers.NewMapHandler(service)
 
 	s.echo.GET("/heath", func(c echo.Context) error {
@@ -49,6 +50,13 @@ func (s *Server) WaterModules() {
 	})
 
 	s.echo.GET("/markers", handler.GetMapMarkers)
+}
+
+func (s *Server) ImageModules() {
+	imageHandler := handlers.NewImageHandler(s.cfg)
+
+	s.echo.GET("/images/:filename", imageHandler.ServeImage)
+	s.echo.GET("/images/health", imageHandler.HealthCheck)
 }
 
 func (s *Server) Start() error {
@@ -59,6 +67,7 @@ func (s *Server) Start() error {
 	}()
 
 	s.WaterModules()
+	s.ImageModules()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
