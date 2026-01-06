@@ -50,6 +50,7 @@ func (s *Server) WaterModules() {
 	})
 
 	s.echo.GET("/markers", handler.GetMapMarkers)
+	s.echo.GET("/markers/detail", handler.GetSectionDetail)
 }
 
 func (s *Server) ImageModules() {

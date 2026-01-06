@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"log"
 
 	"github.com/guatom999/self-boardcast/internal/services"
 	"github.com/robfig/cron"
@@ -25,9 +26,25 @@ func NewWaterJob(service services.WaterLevelServiceInterface) *WaterJob {
 
 func (c *WaterJob) ScheduleGetWaterLevel(ctx context.Context) {
 
-	c.cron.AddFunc("0 */20 * * * *", func() {
-		c.service.ScheduleGetWaterLevel(ctx)
+	var fileName string
+	var locationID int
+
+	c.cron.AddFunc("0 */1 * * * *", func() {
+		jobsFileName, jobLocationID, err := c.service.ScheduleGetWaterLevel(ctx)
+		fileName, locationID = jobsFileName, jobLocationID
+		if err != nil {
+			log.Println("failed to schedule get water level", err)
+		}
 	})
+
+	_ = fileName
+	_ = locationID
+
+	// c.cron.AddFunc("0 0 * * * *", func() {
+	// 	if err := c.service.ScheduleDeleteWaterLevel(ctx, fileName, locationID); err != nil {
+	// 		log.Println("failed to schedule delete data of water level", err)
+	// 	}
+	// })
 
 	c.cron.Start()
 }

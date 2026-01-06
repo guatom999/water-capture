@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/guatom999/self-boardcast/internal/config"
@@ -21,9 +23,10 @@ type waterLevelService struct {
 
 type WaterLevelServiceInterface interface {
 	// ProcessImage(ctx context.Context, imageURL string) (*models.WaterLevel, error)
-	GetByID(ctx context.Context, id string) (*models.WaterLevel, error)
 	GetAllLocations(ctx context.Context, limit int) ([]models.LocationWithWaterLevel, error)
-	ScheduleGetWaterLevel(ctx context.Context) error
+	GetByLocationID(ctx context.Context, id string) ([]*models.WaterLocationDetailRes, error)
+	ScheduleGetWaterLevel(ctx context.Context) (string, int, error)
+	ScheduleDeleteWaterLevel(ctx context.Context, fileName string, locationID int) error
 	CreateWaterLevel(ctx context.Context, req *models.CreateWaterLevelReq) error
 }
 
@@ -51,6 +54,35 @@ func (s *waterLevelService) GetAllLocations(ctx context.Context, limit int) ([]m
 	return locations, nil
 }
 
+func (s *waterLevelService) GetByLocationID(ctx context.Context, id string) ([]*models.WaterLocationDetailRes, error) {
+
+	locationID, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, err
+	}
+
+	waterLevelsRes := make([]*models.WaterLocationDetailRes, 0)
+
+	results, err := s.repo.GetByLocationID(ctx, locationID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, res := range results {
+		waterLevelsRes = append(waterLevelsRes, &models.WaterLocationDetailRes{
+			LocationID: res.LocationID,
+			LevelCm:    res.LevelCm,
+			Image:      res.Image,
+			Danger:     res.Danger,
+			IsFlooded:  res.IsFlooded,
+			Source:     res.Source,
+			MeasuredAt: res.MeasuredAt,
+			Note:       res.Note,
+		})
+	}
+	return waterLevelsRes, nil
+}
+
 func (s *waterLevelService) CreateWaterLevel(ctx context.Context, req *models.CreateWaterLevelReq) error {
 
 	if err := s.repo.CreateWaterLevel(ctx, &entities.WaterLevel{
@@ -68,12 +100,14 @@ func (s *waterLevelService) CreateWaterLevel(ctx context.Context, req *models.Cr
 	return nil
 }
 
-func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) error {
+func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) (string, int, error) {
 
-	result, err := utils.PredictWaterLevel(s.cfg.App.ImageProcessingDir)
+	fileName := utils.GenerateFileName()
+
+	result, err := utils.PredictWaterLevel(s.cfg.App.ImageProcessingDir, fileName)
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", 0, err
 	}
 
 	entity := &entities.WaterLevel{
@@ -90,25 +124,30 @@ func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) error {
 			}
 		}(result.WaterLevel),
 		IsFlooded:  false,
-		Source:     "sensor-1",
+		Source:     sql.NullString{String: "sensor-1"},
 		MeasuredAt: time.Now(),
 		Note:       "get value of waterLevel from cctv of water",
 	}
 
 	if err := s.repo.CreateWaterLevel(ctx, entity); err != nil {
 		log.Println("failed to create water level", err)
+		return "", 0, err
+	}
+
+	return fileName, int(entity.LocationID), nil
+}
+
+func (s *waterLevelService) ScheduleDeleteWaterLevel(ctx context.Context, fileName string, locationID int) error {
+
+	if err := utils.DeleteFile(s.cfg.App.UploadDir + "/" + fileName); err != nil {
+		log.Println("failed to delete file", err)
 		return err
 	}
 
-	if err := s.repo.DeleteWaterLevels(ctx, int(entity.LocationID)); err != nil {
+	if err := s.repo.DeleteOldestWaterLevels(ctx, locationID, 5); err != nil {
 		log.Println("failed to delete water level", err)
 		return err
 	}
 
 	return nil
-}
-
-// GetByID returns water level by ID
-func (s *waterLevelService) GetByID(ctx context.Context, id string) (*models.WaterLevel, error) {
-	return s.repo.GetByID(ctx, id)
 }

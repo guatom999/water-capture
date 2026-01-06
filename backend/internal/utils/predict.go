@@ -13,11 +13,11 @@ import (
 	"github.com/guatom999/self-boardcast/internal/models"
 )
 
-func PredictWaterLevel(imageProcessingDir string) (*models.PredictWater, error) {
+func PredictWaterLevel(imageProcessingDir string, fileName string) (*models.PredictWater, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	fileName := GenerateFileName()
+	// fileName := GenerateFileName()
 
 	pythonScript := filepath.Join(imageProcessingDir, "create_waterlevel_file.py")
 

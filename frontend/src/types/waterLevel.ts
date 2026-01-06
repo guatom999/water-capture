@@ -34,6 +34,7 @@ interface MarkersWithLocation {
     IsActive: boolean,
     WaterLevelID: string,
     LevelCm: number,
+    Image: string,
     Danger: string,
     IsFlooded: boolean,
     MeasuredAt: string,

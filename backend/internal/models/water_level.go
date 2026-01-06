@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 type Location struct {
 	ID          int64     `json:"id" db:"id"`
@@ -82,4 +85,15 @@ type LocationWithWaterLevel struct {
 	IsFlooded    *bool      `db:"is_flooded"`
 	MeasuredAt   *time.Time `db:"measured_at"`
 	Note         *string    `db:"note"`
+}
+
+type WaterLocationDetailRes struct {
+	LocationID int64          `json:"location_id"`
+	LevelCm    float64        `json:"level_cm"`
+	Image      string         `json:"image"`
+	Danger     string         `json:"danger"`
+	IsFlooded  bool           `json:"is_flooded"`
+	Source     sql.NullString `json:"source"`
+	MeasuredAt time.Time      `json:"measured_at"`
+	Note       string         `json:"note"`
 }

@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -16,11 +17,11 @@ type waterLevelRepository struct {
 
 // WaterLevelRepository interface
 type WaterLevelRepositoryInterface interface {
-	GetLatest(ctx context.Context) (*models.WaterLevel, error)
+	// GetLatest(ctx context.Context) (*models.WaterLevel, error)
 	GetAll(ctx context.Context, limit int) ([]models.LocationWithWaterLevel, error)
-	GetByID(ctx context.Context, id string) (*models.WaterLevel, error)
+	GetByLocationID(ctx context.Context, locationID int) ([]*entities.WaterLevel, error)
 	CreateWaterLevel(ctx context.Context, req *entities.WaterLevel) error
-	DeleteWaterLevels(ctx context.Context, locationID int) error
+	DeleteOldestWaterLevels(ctx context.Context, locationID int, keepLatest int) error
 }
 
 func NewWaterLevelRepository(db *sqlx.DB) WaterLevelRepositoryInterface {
@@ -29,9 +30,9 @@ func NewWaterLevelRepository(db *sqlx.DB) WaterLevelRepositoryInterface {
 	}
 }
 
-func (r *waterLevelRepository) GetLatest(ctx context.Context) (*models.WaterLevel, error) {
-	return nil, nil
-}
+//	func (r *waterLevelRepository) GetLatest(ctx context.Context) (*models.WaterLevel, error) {
+//		return nil, nil
+//	}
 func (r *waterLevelRepository) GetAll(pctx context.Context, limit int) ([]models.LocationWithWaterLevel, error) {
 
 	ctx, cancel := context.WithTimeout(pctx, time.Second*20)
@@ -61,6 +62,7 @@ func (r *waterLevelRepository) GetAll(pctx context.Context, limit int) ([]models
 	result := make([]models.LocationWithWaterLevel, 0)
 
 	if err := r.db.SelectContext(ctx, &result, query); err != nil {
+		log.Printf("Error failed to select from locations database %v", err.Error())
 		return nil, err
 	}
 
@@ -68,8 +70,20 @@ func (r *waterLevelRepository) GetAll(pctx context.Context, limit int) ([]models
 
 }
 
-func (r *waterLevelRepository) GetByID(ctx context.Context, id string) (*models.WaterLevel, error) {
-	return nil, nil
+func (r *waterLevelRepository) GetByLocationID(ctx context.Context, locationID int) ([]*entities.WaterLevel, error) {
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+
+	query := `SELECT * FROM water_levels WHERE location_id = $1`
+
+	result := make([]*entities.WaterLevel, 0)
+	if err := r.db.SelectContext(ctx, &result, query, locationID); err != nil {
+		log.Printf("Error failed to select from water_levels database %v", err.Error())
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (r *waterLevelRepository) CreateWaterLevel(ctx context.Context, req *entities.WaterLevel) error {
@@ -88,23 +102,64 @@ func (r *waterLevelRepository) CreateWaterLevel(ctx context.Context, req *entiti
 	return nil
 }
 
-func (r *waterLevelRepository) DeleteWaterLevels(ctx context.Context, locationID int) error {
+func (r *waterLevelRepository) DeleteOldestWaterLevels(ctx context.Context, locationID int, keepLatest int) error {
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*60)
 	defer cancel()
 
-	query := `DELETE FROM water_levels WHERE id IN (
-		SELECT id FROM water_levels 
-		WHERE location_id = $1 
-		ORDER BY measured_at ASC 
-		LIMIT 1
-	)`
+	tx, err := r.db.Begin()
+	if err != nil {
+		log.Printf("Error failed to begin transaction %v", err.Error())
+		return fmt.Errorf("error failed to begin transaction %v", err.Error())
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
 
-	_, err := r.db.ExecContext(ctx, query, locationID)
+	query := `
+        DELETE FROM water_levels 
+        WHERE id IN (
+            SELECT id 
+            FROM water_levels 
+            WHERE location_id = $1
+            ORDER BY measured_at DESC 
+            OFFSET $2
+        )
+    `
+
+	_, err = tx.ExecContext(ctx, query, locationID, keepLatest)
 	if err != nil {
 		log.Printf("Error failed to delete from water_levels database %v", err.Error())
-		return err
+		return fmt.Errorf("error failed to delete from water_levels database %v", err.Error())
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Printf("Error failed to commit transaction %v", err.Error())
+		return fmt.Errorf("error failed to commit transaction %v", err.Error())
 	}
 
 	return nil
 }
+
+// func (r *waterLevelRepository) DeleteOldestWaterLevels(ctx context.Context, locationID int) error {
+
+// 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+// 	defer cancel()
+
+// 	query := `DELETE FROM water_levels WHERE id IN (
+// 		SELECT id FROM water_levels
+// 		WHERE location_id = $1
+// 		ORDER BY measured_at ASC
+// 		LIMIT 1
+// 	)`
+
+// 	_, err := r.db.ExecContext(ctx, query, locationID)
+// 	if err != nil {
+// 		log.Printf("Error failed to delete from water_levels database %v", err.Error())
+// 		return err
+// 	}
+
+// 	return nil
+// }
