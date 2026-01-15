@@ -13,6 +13,33 @@ import (
 	"github.com/guatom999/self-boardcast/internal/models"
 )
 
+func CaptureWaterImage(imageProcessingDir string, fileName string) error {
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	pythonScript := filepath.Join(imageProcessingDir, "create_waterlevel_file.py")
+
+	cmd := exec.CommandContext(ctx, "python", pythonScript, fileName)
+	cmd.Dir = imageProcessingDir
+
+	framOutput, err := cmd.CombinedOutput()
+
+	if ctx.Err() != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("failed to create water level file")
+		}
+		return fmt.Errorf("operation cancelled: %v", ctx.Err())
+	}
+
+	if err != nil {
+		log.Printf("Python script error output: %s\n", string(framOutput))
+		return fmt.Errorf("failed to run Python script: %v", err)
+	}
+
+	return nil
+}
+
 func PredictWaterLevel(imageProcessingDir string, fileName string) (*models.PredictWater, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

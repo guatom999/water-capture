@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -26,8 +27,9 @@ type WaterLevelServiceInterface interface {
 	GetAllLocations(ctx context.Context, limit int) ([]models.LocationWithWaterLevel, error)
 	GetByLocationID(ctx context.Context, id string) ([]*models.WaterLocationDetailRes, error)
 	ScheduleGetWaterLevel(ctx context.Context) (string, int, error)
-	ScheduleDeleteWaterLevel(ctx context.Context, fileName string, locationID int) error
 	CreateWaterLevel(ctx context.Context, req *models.CreateWaterLevelReq) error
+
+	ScheduleDeleteWaterLevel(ctx context.Context, fileName string, locationID int) error
 }
 
 func NewWaterLevelService(repo repositories.WaterLevelRepositoryInterface, baseURL string, cfg *config.Config) WaterLevelServiceInterface {
@@ -104,33 +106,62 @@ func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) (string, 
 
 	fileName := utils.GenerateFileName()
 
-	result, err := utils.PredictWaterLevel(s.cfg.App.ImageProcessingDir, fileName)
-	if err != nil {
-		log.Println(err)
+	if err := utils.CaptureWaterImage(s.cfg.App.ImageProcessingDir, fileName); err != nil {
 		return "", 0, err
 	}
 
+	apiResponse := new(models.ThaiWaterAPIResponse)
+
+	if err := utils.Get("https://api-v3.thaiwater.net/api/v1/thaiwater30/provinces/waterlevel?province_code=13", apiResponse); err != nil {
+		return "", 0, err
+	}
+
+	if apiResponse.Result != "OK" {
+		return "", 0, fmt.Errorf("API returned non-OK result: %s", apiResponse.Result)
+	}
+
+	// if err != nil {
+	// 	log.Println("failed to predict water level:", err)
+	// 	filePath := s.cfg.App.UploadDir + "/images/" + fileName
+	// 	if deleteErr := utils.DeleteFile(filePath); deleteErr != nil {
+	// 		log.Println("failed to cleanup file after prediction error:", deleteErr)
+	// 	}
+	// 	return "", 0, err
+	// }
+
+	stationName := apiResponse.Data[0].Station.TeleStationName.TH
+
 	entity := &entities.WaterLevel{
 		LocationID: 28,
-		LevelCm:    result.WaterLevel * 100,
-		Image:      result.FileName,
-		Danger: func(waterLevel float64) string {
-			if waterLevel < 1 {
+		LevelCm:    utils.ConvertStringToFloat64(apiResponse.Data[0].WaterlevelMSL) * 100,
+		Image:      fileName,
+		Danger: func() string {
+			if utils.ConvertStringToFloat64(apiResponse.Data[0].WaterlevelMSL) < 1 {
 				return "SAFE"
-			} else if waterLevel < 2 {
+			} else if utils.ConvertStringToFloat64(apiResponse.Data[0].WaterlevelMSL) < 1.29 {
 				return "WATCH"
 			} else {
 				return "DANGER"
 			}
-		}(result.WaterLevel),
-		IsFlooded:  false,
-		Source:     sql.NullString{String: "sensor-1"},
-		MeasuredAt: time.Now(),
+		}(),
+		IsFlooded: func() bool {
+			if utils.ConvertStringToFloat64(apiResponse.Data[0].WaterlevelMSL) < 1.29 {
+				return false
+			} else {
+				return true
+			}
+		}(),
+		Source:     sql.NullString{String: stationName, Valid: true},
+		MeasuredAt: utils.ConvertStringToTime(apiResponse.Data[0].WaterlevelDatetime),
 		Note:       "get value of waterLevel from cctv of water",
 	}
 
 	if err := s.repo.CreateWaterLevel(ctx, entity); err != nil {
-		log.Println("failed to create water level", err)
+		log.Println("failed to create water level in database:", err)
+		filePath := s.cfg.App.UploadDir + "/images/" + fileName
+		if deleteErr := utils.DeleteFile(filePath); deleteErr != nil {
+			log.Printf("failed to cleanup file %s after DB insert error: %v", fileName, deleteErr)
+		}
 		return "", 0, err
 	}
 
@@ -139,15 +170,46 @@ func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) (string, 
 
 func (s *waterLevelService) ScheduleDeleteWaterLevel(ctx context.Context, fileName string, locationID int) error {
 
-	if err := utils.DeleteFile(s.cfg.App.UploadDir + "/" + fileName); err != nil {
-		log.Println("failed to delete file", err)
+	scheduleAt := time.Now().In(func() *time.Location {
+		loc, err := time.LoadLocation("Asia/Bangkok")
+		if err != nil {
+			log.Printf("failed to load location %v", err.Error())
+			return nil
+		}
+		return loc
+	}())
+
+	covertLocationID := int64(28)
+
+	if err := s.repo.MarkForDeletion(ctx, covertLocationID, scheduleAt); err != nil {
+		log.Println("failed to mark for deletion", err)
 		return err
 	}
 
-	if err := s.repo.DeleteOldestWaterLevels(ctx, locationID, 5); err != nil {
-		log.Println("failed to delete water level", err)
+	results, err := s.repo.GetPendingDeletions(ctx)
+	if err != nil {
+		log.Println("failed to get pending deletions", err)
 		return err
 	}
+
+	for _, value := range results {
+		if err := utils.DeleteFile(s.cfg.App.UploadDir + "/" + value.Image); err != nil {
+			log.Println("failed to delete file", value.Image, err)
+		}
+		if err := s.repo.HardDelete(ctx, value.ID); err != nil {
+			log.Println("failed to delete water level", value.ID, err)
+		}
+	}
+
+	// if err := utils.DeleteFile(s.cfg.App.UploadDir + "/" + fileName); err != nil {
+	// 	log.Println("failed to delete file", err)
+	// 	return err
+	// }
+
+	// if err := s.repo.DeleteOldestWaterLevels(ctx, locationID, 5); err != nil {
+	// 	log.Println("failed to delete water level", err)
+	// 	return err
+	// }
 
 	return nil
 }

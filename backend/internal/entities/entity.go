@@ -17,13 +17,16 @@ type Location struct {
 }
 
 type WaterLevel struct {
-	ID         int64          `db:"id" json:"id"`
-	LocationID int64          `db:"location_id" json:"location_id"`
-	LevelCm    float64        `db:"level_cm" json:"level_cm"`
-	Image      string         `db:"image" json:"image"`
-	Danger     string         `db:"danger" json:"danger"`
-	IsFlooded  bool           `db:"is_flooded" json:"is_flooded"`
-	Source     sql.NullString `db:"source" json:"source"`
-	MeasuredAt time.Time      `db:"measured_at" json:"measured_at"`
-	Note       string         `db:"note" json:"note"`
+	ID                int64          `db:"id" json:"id"`
+	LocationID        int64          `db:"location_id" json:"location_id"`
+	LevelCm           float64        `db:"level_cm" json:"level_cm"`
+	Image             string         `db:"image" json:"image"`
+	Danger            string         `db:"danger" json:"danger"`
+	IsFlooded         bool           `db:"is_flooded" json:"is_flooded"`
+	Source            sql.NullString `db:"source" json:"source"`
+	MeasuredAt        time.Time      `db:"measured_at" json:"measured_at"`
+	Note              string         `db:"note" json:"note"`
+	Status            string         `db:"status"` // "active", "pending_deletion", "deleted"
+	DeletedAt         sql.NullTime   `db:"deleted_at"`
+	ScheduledDeleteAt sql.NullTime   `db:"scheduled_delete_at"`
 }

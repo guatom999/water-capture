@@ -156,7 +156,7 @@ const SectionDetail = () => {
                 </div>
             )}
 
-            {/* <Footer /> */}
+            <Footer />
         </div>
     );
 };
