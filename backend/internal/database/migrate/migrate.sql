@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS locations (
 
 CREATE TYPE danger_level AS ENUM ('SAFE', 'WATCH', 'DANGER', 'CRITICAL');
 
+CREATE TYPE water_status AS ENUM ('ACTIVE', 'PENDING_DELETION', 'DELETED');
+
 CREATE TABLE IF NOT EXISTS water_levels (
     id            BIGSERIAL PRIMARY KEY,
     location_id   BIGINT NOT NULL,
@@ -20,5 +22,8 @@ CREATE TABLE IF NOT EXISTS water_levels (
     is_flooded    BOOLEAN NOT NULL,           
     source        VARCHAR(50),                
     measured_at   TIMESTAMPTZ NOT NULL,       
-    note          TEXT                        
+    note          TEXT,
+    status        water_status NOT NULL,
+    deleted_at    TIMESTAMPTZ,                
+    scheduled_delete_at TIMESTAMPTZ                   
 );
