@@ -26,7 +26,7 @@ type WaterLevelServiceInterface interface {
 	// ProcessImage(ctx context.Context, imageURL string) (*models.WaterLevel, error)
 	GetAllLocations(ctx context.Context, limit int) ([]models.LocationWithWaterLevel, error)
 	GetByLocationID(ctx context.Context, id string) ([]*models.WaterLocationDetailRes, error)
-	ScheduleGetWaterLevel(ctx context.Context) (string, int, error)
+	ScheduleGetWaterLevel(ctx context.Context) (*entities.WaterLevel, error)
 	CreateWaterLevel(ctx context.Context, req *models.CreateWaterLevelReq) error
 
 	ScheduleDeleteWaterLevel(ctx context.Context, fileName string, locationID int) error
@@ -102,32 +102,23 @@ func (s *waterLevelService) CreateWaterLevel(ctx context.Context, req *models.Cr
 	return nil
 }
 
-func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) (string, int, error) {
+func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) (*entities.WaterLevel, error) {
 
 	fileName := utils.GenerateFileName()
 
 	if err := utils.CaptureWaterImage(s.cfg.App.ImageProcessingDir, fileName); err != nil {
-		return "", 0, err
+		return nil, err
 	}
 
 	apiResponse := new(models.ThaiWaterAPIResponse)
 
 	if err := utils.Get("https://api-v3.thaiwater.net/api/v1/thaiwater30/provinces/waterlevel?province_code=13", apiResponse); err != nil {
-		return "", 0, err
+		return nil, err
 	}
 
 	if apiResponse.Result != "OK" {
-		return "", 0, fmt.Errorf("API returned non-OK result: %s", apiResponse.Result)
+		return nil, fmt.Errorf("API returned non-OK result: %s", apiResponse.Result)
 	}
-
-	// if err != nil {
-	// 	log.Println("failed to predict water level:", err)
-	// 	filePath := s.cfg.App.UploadDir + "/images/" + fileName
-	// 	if deleteErr := utils.DeleteFile(filePath); deleteErr != nil {
-	// 		log.Println("failed to cleanup file after prediction error:", deleteErr)
-	// 	}
-	// 	return "", 0, err
-	// }
 
 	stationName := apiResponse.Data[0].Station.TeleStationName.TH
 
@@ -162,10 +153,10 @@ func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) (string, 
 		if deleteErr := utils.DeleteFile(filePath); deleteErr != nil {
 			log.Printf("failed to cleanup file %s after DB insert error: %v", fileName, deleteErr)
 		}
-		return "", 0, err
+		return nil, err
 	}
 
-	return fileName, int(entity.LocationID), nil
+	return entity, nil
 }
 
 func (s *waterLevelService) ScheduleDeleteWaterLevel(ctx context.Context, fileName string, locationID int) error {
