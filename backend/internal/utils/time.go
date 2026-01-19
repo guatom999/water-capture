@@ -11,3 +11,10 @@ func FormatTime(t time.Time) string {
 func ParseTime(s string) (time.Time, error) {
 	return time.Parse(time.RFC3339, s)
 }
+
+func ParseTimeToString(t time.Time) string {
+
+	const CustomTimeLayout = "2006-01-02 15:04:05.000 -0700"
+
+	return t.Format(CustomTimeLayout)
+}
