@@ -34,7 +34,7 @@ func (c *WaterJob) ScheduleGetWaterLevel(ctx context.Context) {
 	var fileName string
 	var locationID int
 
-	c.cron.AddFunc("*/20 * * * * *", func() {
+	c.cron.AddFunc("0 */1 * * * *", func() {
 		waterLevel, err := c.service.ScheduleGetWaterLevel(ctx)
 		if err != nil {
 			log.Println("failed to schedule get water level", err)
@@ -61,7 +61,7 @@ func (c *WaterJob) ScheduleGetWaterLevel(ctx context.Context) {
 		}
 	})
 
-	c.cron.AddFunc("0 0 0 * * *", func() {
+	c.cron.AddFunc("0 */20 * * * *", func() {
 		if err := c.service.ScheduleDeleteWaterLevel(ctx, fileName, locationID); err != nil {
 			log.Println("failed to schedule delete data of water level", err)
 		}
