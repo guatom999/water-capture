@@ -2,10 +2,6 @@ import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Link } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
-import L, { Handler } from 'leaflet';
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-import Header from './Header';
 import { getMapMarkersService } from '../services/waterLevelService';
 import type { MapMarkerResponse } from '../types/waterLevel';
 
@@ -57,35 +53,46 @@ const MapSection = () => {
     }
 
     return (
-        <section className="bg-gray-50 w-full h-screen relative">
-            <div className='w-full h-full'>
-                <MapContainer
-                    // center={[mapData.Markers[0].Latitude, mapData.Markers[0].Longitude]}
-                    center={[13.7567, 100.5115]}
-                    zoom={10}
-                    scrollWheelZoom={true}
-                    style={{ height: '100%', width: '100%' }}
-                >
-                    <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
+        <section className="bg-gradient-to-b from-gray-50 to-gray-100 w-full py-8 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+                <div className="mb-6 text-center">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
+                        แผนที่ระดับน้ำ
+                    </h2>
+                    <p className="text-gray-600">
+                        คลิกที่ marker เพื่อดูรายละเอียดระดับน้ำในแต่ละจุด
+                    </p>
+                </div>
 
-                    {mapData.markers.map((marker: any) => (
-                        <Marker key={marker.LocationID} position={[marker.Latitude, marker.Longitude]}>
-                            <Popup>
-                                <Link to={`/markers/detail?location_id=${marker.LocationID}`}>
-                                    <div className="font-bold">{marker.LocationName}</div>
-                                </Link>
-                                <div className="whitespace-pre-line">{marker.Note}</div>
-                                <div className="text-sm text-gray-600 mt-2">
-                                    Level: {marker.LevelCm} cm
-                                </div>
-                                <img src={marker.Image} alt="" />
-                            </Popup>
-                        </Marker>
-                    ))}
-                </MapContainer>
+                {/* Map Container */}
+                <div className="rounded-2xl overflow-hidden shadow-xl border border-gray-200" style={{ height: '70vh' }}>
+                    <MapContainer
+                        center={[13.7567, 100.5115]}
+                        zoom={8}
+                        scrollWheelZoom={true}
+                        style={{ height: '100%', width: '100%' }}
+                    >
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+
+                        {mapData.markers.map((marker: any) => (
+                            <Marker key={marker.LocationID} position={[marker.Latitude, marker.Longitude]}>
+                                <Popup>
+                                    <Link to={`/markers/detail?location_id=${marker.LocationID}`}>
+                                        <div className="font-bold">{marker.LocationName}</div>
+                                    </Link>
+                                    <div className="whitespace-pre-line">{marker.Note}</div>
+                                    <div className="text-sm text-gray-600 mt-2">
+                                        Level: {marker.LevelCm} cm
+                                    </div>
+                                    <img src={marker.Image} alt="" />
+                                </Popup>
+                            </Marker>
+                        ))}
+                    </MapContainer>
+                </div>
             </div>
         </section>
     );
