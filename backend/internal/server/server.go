@@ -20,9 +20,10 @@ import (
 )
 
 type Server struct {
-	db   *sqlx.DB
-	echo *echo.Echo
-	cfg  *config.Config
+	db          *sqlx.DB
+	echo        *echo.Echo
+	cfg         *config.Config
+	authService services.AuthServiceInterface
 }
 
 func NewServer(db *sqlx.DB, cfg *config.Config) *Server {
@@ -33,10 +34,15 @@ func NewServer(db *sqlx.DB, cfg *config.Config) *Server {
 	e.Use(middleware.CORS())
 	// e.Use(middleware.SecurityHeaders())
 
+	// Initialize auth service for use across modules
+	authRepo := repositories.NewAuthRepository(db)
+	authService := services.NewAuthService(authRepo, cfg)
+
 	return &Server{
-		db:   db,
-		echo: e,
-		cfg:  cfg,
+		db:          db,
+		echo:        e,
+		cfg:         cfg,
+		authService: authService,
 	}
 }
 
@@ -60,6 +66,20 @@ func (s *Server) ImageModules() {
 	s.echo.GET("/images/health", imageHandler.HealthCheck)
 }
 
+func (s *Server) AuthModules() {
+	authHandler := handlers.NewAuthHandler(s.authService)
+
+	// Public auth routes
+	auth := s.echo.Group("/auth")
+	auth.POST("/register", authHandler.Register)
+	auth.POST("/login", authHandler.Login)
+	auth.POST("/refresh", authHandler.RefreshToken)
+	auth.POST("/logout", authHandler.Logout)
+
+	// Protected route example - requires valid access token
+	// auth.GET("/me", authHandler.GetMe, customMiddleware.JWTMiddleware(s.authService))
+}
+
 func (s *Server) Start() error {
 	go func() {
 		if err := s.echo.Start(fmt.Sprintf(":%d", s.cfg.Server.Port)); err != nil && err != http.ErrServerClosed {
@@ -67,6 +87,7 @@ func (s *Server) Start() error {
 		}
 	}()
 
+	s.AuthModules()
 	s.WaterModules()
 	s.ImageModules()
 
@@ -74,7 +95,7 @@ func (s *Server) Start() error {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
 	<-quit
-	log.Println("🛑 Shutting down server...")
+	log.Println(" Shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -83,6 +104,6 @@ func (s *Server) Start() error {
 		return fmt.Errorf("server forced to shutdown: %w", err)
 	}
 
-	log.Println("✅ Server exited gracefully")
+	log.Println("Server exited gracefully")
 	return nil
 }
