@@ -56,6 +56,7 @@ func (r *waterLevelRepository) GetAll(pctx context.Context, limit int) ([]models
             l.latitude,
             l.longitude,
             l.is_active,
+			l.bank_level,
             wl.id AS water_level_id,
             wl.level_cm,
 			wl.image,

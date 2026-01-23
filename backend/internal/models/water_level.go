@@ -77,6 +77,7 @@ type LocationWithWaterLevel struct {
 	Latitude            float64 `db:"latitude"`
 	Longitude           float64 `db:"longitude"`
 	IsActive            bool    `db:"is_active"`
+	BankLevel           float64 `db:"bank_level"`
 
 	WaterLevelID *int64     `db:"water_level_id"`
 	LevelCm      *float64   `db:"level_cm"`
@@ -85,6 +86,24 @@ type LocationWithWaterLevel struct {
 	IsFlooded    *bool      `db:"is_flooded"`
 	MeasuredAt   *time.Time `db:"measured_at"`
 	Note         *string    `db:"note"`
+}
+
+type LocationWithWaterLevelRes struct {
+	LocationID          int64   `json:"location_id"`
+	LocationName        string  `json:"location_name"`
+	LocationDescription string  `json:"location_description"`
+	Latitude            float64 `json:"latitude"`
+	Longitude           float64 `json:"longitude"`
+	IsActive            bool    `json:"is_active"`
+	BankLevel           float64 `json:"bank_level"`
+
+	WaterLevelID *int64   `json:"water_level_id"`
+	LevelCm      *float64 `json:"level_cm"`
+	Image        *string  `json:"image"`
+	Danger       *string  `json:"danger"`
+	IsFlooded    *bool    `json:"is_flooded"`
+	MeasuredAt   string   `json:"measured_at"`
+	Note         *string  `json:"note"`
 }
 
 type WaterLocationDetailRes struct {

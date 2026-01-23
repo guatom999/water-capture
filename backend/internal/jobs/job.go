@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/guatom999/self-boardcast/internal/services"
 	"github.com/guatom999/self-boardcast/internal/tasks"
@@ -34,7 +35,8 @@ func (c *WaterJob) ScheduleGetWaterLevel(ctx context.Context) {
 	var fileName string
 	var locationID int
 
-	c.cron.AddFunc("0 */1 * * * *", func() {
+	c.cron.AddFunc("0 */10 * * * *", func() {
+		time.Sleep(time.Second * 10)
 		waterLevel, err := c.service.ScheduleGetWaterLevel(ctx)
 		if err != nil {
 			log.Println("failed to schedule get water level", err)
@@ -61,11 +63,14 @@ func (c *WaterJob) ScheduleGetWaterLevel(ctx context.Context) {
 		}
 	})
 
-	c.cron.AddFunc("0 */20 * * * *", func() {
-		if err := c.service.ScheduleDeleteWaterLevel(ctx, fileName, locationID); err != nil {
-			log.Println("failed to schedule delete data of water level", err)
-		}
-	})
+	_ = fileName
+	_ = locationID
+
+	// c.cron.AddFunc("0 0 0 * * *", func() {
+	// 	if err := c.service.ScheduleDeleteWaterLevel(ctx, fileName, locationID); err != nil {
+	// 		log.Println("failed to schedule delete data of water level", err)
+	// 	}
+	// })
 
 	c.cron.Start()
 }

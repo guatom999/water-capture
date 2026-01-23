@@ -22,17 +22,17 @@ var (
 	ErrInvalidToken       = errors.New("invalid or expired token")
 )
 
-type authService struct {
-	repo repositories.AuthRepositoryInterface
-	cfg  *config.Config
-}
-
 type AuthServiceInterface interface {
 	Register(ctx context.Context, req *models.RegisterRequest) (*models.AuthResponse, error)
 	Login(ctx context.Context, req *models.LoginRequest) (*models.AuthResponse, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*models.AuthResponse, error)
 	Logout(ctx context.Context, refreshToken string) error
 	ValidateAccessToken(tokenString string) (*models.TokenClaims, error)
+}
+
+type authService struct {
+	repo repositories.AuthRepositoryInterface
+	cfg  *config.Config
 }
 
 func NewAuthService(repo repositories.AuthRepositoryInterface, cfg *config.Config) AuthServiceInterface {

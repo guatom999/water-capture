@@ -12,13 +12,11 @@ import (
 func JWTMiddleware(authService services.AuthServiceInterface) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Get token from Authorization header
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Missing authorization header"})
 			}
 
-			// Check Bearer format
 			parts := strings.Split(authHeader, " ")
 			if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid authorization header format"})

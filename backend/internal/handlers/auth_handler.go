@@ -9,11 +9,19 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type AuthHandlerInterface interface {
+	Register(c echo.Context) error
+	Login(c echo.Context) error
+	RefreshToken(c echo.Context) error
+	Logout(c echo.Context) error
+	GetMe(c echo.Context) error
+}
+
 type authHandler struct {
 	authService services.AuthServiceInterface
 }
 
-func NewAuthHandler(authService services.AuthServiceInterface) *authHandler {
+func NewAuthHandler(authService services.AuthServiceInterface) AuthHandlerInterface {
 	return &authHandler{
 		authService: authService,
 	}

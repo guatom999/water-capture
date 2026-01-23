@@ -69,7 +69,6 @@ func (s *Server) ImageModules() {
 func (s *Server) AuthModules() {
 	authHandler := handlers.NewAuthHandler(s.authService)
 
-	// Public auth routes
 	auth := s.echo.Group("/auth")
 	auth.POST("/register", authHandler.Register)
 	auth.POST("/login", authHandler.Login)

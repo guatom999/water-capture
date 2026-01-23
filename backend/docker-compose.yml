@@ -1,0 +1,151 @@
+services:
+  # ================================
+  # PostgreSQL Database
+  # ================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: self-boardcast-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: examplepassword
+      POSTGRES_DB: self_boardcast-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5503:5432"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ================================
+  # Redis (for Asynq queue)
+  # ================================
+  redis:
+    image: redis:7-alpine
+    container_name: self-boardcast-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ================================
+  # API Service
+  # ================================
+  api:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    #   target: api
+    image: badzboss/waterlevel-broadcast:1.0.1
+    container_name: self-boardcast-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_PORT=8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=examplepassword
+      - DB_NAME=self_boardcast-db
+      - DB_SSLMODE=disable
+      - JWT_SECRET=${JWT_SECRET}
+      - ACCESS_TOKEN_EXPIRY=15
+      - REFRESH_TOKEN_EXPIRY=1
+      - UPLOAD_DIR=/app/uploads/images
+      - IMAGE_PROCESSING_DIR=/app/image_processing
+      - REDIS_ADDRESS=redis:6379
+    volumes:
+      - ./uploads:/app/uploads
+      - ./image_processing:/app/image_processing
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # ================================
+  # Cron Service
+  # ================================
+  cron:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: cron
+    container_name: self-boardcast-cron
+    restart: unless-stopped
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=examplepassword
+      - DB_NAME=self_boardcast-db
+      - DB_SSLMODE=disable
+      - UPLOAD_DIR=/app/uploads/images
+      - IMAGE_PROCESSING_DIR=/app/image_processing
+      - REDIS_ADDRESS=redis:6379
+    volumes:
+      - ./uploads:/app/uploads
+      - ./image_processing:/app/image_processing
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # ================================
+  # Worker Service
+  # ================================
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    container_name: self-boardcast-worker
+    restart: unless-stopped
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=examplepassword
+      - DB_NAME=self_boardcast-db
+      - DB_SSLMODE=disable
+      - UPLOAD_DIR=/app/uploads/images
+      - IMAGE_PROCESSING_DIR=/app/image_processing
+      - REDIS_ADDRESS=redis:6379
+    volumes:
+      - ./uploads:/app/uploads
+      - ./image_processing:/app/image_processing
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

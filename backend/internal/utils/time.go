@@ -13,8 +13,17 @@ func ParseTime(s string) (time.Time, error) {
 }
 
 func ParseTimeToString(t time.Time) string {
+	const CustomTimeLayout = "2006-01-02 15:04:05"
+	if t.IsZero() {
+		return ""
+	}
 
-	const CustomTimeLayout = "2006-01-02 15:04:05.000 -0700"
-
-	return t.Format(CustomTimeLayout)
+	bangkok, _ := time.LoadLocation("Asia/Bangkok")
+	return t.In(bangkok).Format(CustomTimeLayout)
+}
+func ParseTimePtrToString(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return ParseTimeToString(*t)
 }

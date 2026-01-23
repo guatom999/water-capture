@@ -7,7 +7,7 @@ import (
 type User struct {
 	ID        int64     `db:"id" json:"id"`
 	Email     string    `db:"email" json:"email"`
-	Password  string    `db:"password" json:"-"` // Never expose password in JSON
+	Password  string    `db:"password" json:"-"`
 	Name      string    `db:"name" json:"name"`
 	Role      string    `db:"role" json:"role"`
 	IsActive  bool      `db:"is_active" json:"is_active"`
