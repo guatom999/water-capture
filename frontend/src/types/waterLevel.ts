@@ -25,18 +25,18 @@ export interface MapMarkerResponse {
 //     timestamp: string;
 // }
 
-interface MarkersWithLocation {
-    LocationID: string,
-    LocationName: string,
-    LocationDescription: string,
-    Latitude: number,
-    Longitude: number,
-    IsActive: boolean,
-    WaterLevelID: string,
-    LevelCm: number,
-    Image: string,
-    Danger: string,
-    IsFlooded: boolean,
-    MeasuredAt: string,
-    Note: string
+export interface MarkersWithLocation {
+    location_id: string,
+    location_name: string,
+    location_description: string,
+    latitude: number,
+    longitude: number,
+    is_active: boolean,
+    water_level_id: string,
+    level_cm: number,
+    image: string,
+    danger: string,
+    is_flooded: boolean,
+    measured_at: string,
+    note: string
 }
