@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Link } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 import { getMapMarkersService } from '../services/waterLevelService';
-import type { MapMarkerResponse } from '../types/waterLevel';
+import type { MapMarkerResponse, MarkersWithLocation } from '../types/waterLevel';
 
 // let DefaultIcon = L.icon({
 //     iconUrl: icon,
@@ -77,17 +77,17 @@ const MapSection = () => {
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
 
-                        {mapData.markers.map((marker: any) => (
-                            <Marker key={marker.LocationID} position={[marker.Latitude, marker.Longitude]}>
+                        {mapData.markers.map((marker: MarkersWithLocation) => (
+                            <Marker key={marker.location_id} position={[marker.latitude, marker.longitude]}>
                                 <Popup>
-                                    <Link to={`/markers/detail?location_id=${marker.LocationID}`}>
-                                        <div className="font-bold">{marker.LocationName}</div>
+                                    <Link to={`/markers/detail?location_id=${marker.location_id}`}>
+                                        <div className="font-bold">{marker.location_name}</div>
                                     </Link>
-                                    <div className="whitespace-pre-line">{marker.Note}</div>
+                                    <div className="whitespace-pre-line">{marker.note}</div>
                                     <div className="text-sm text-gray-600 mt-2">
-                                        Level: {marker.LevelCm} cm
+                                        Level: {marker.level_cm} cm
                                     </div>
-                                    <img src={marker.Image} alt="" />
+                                    <img src={marker.image} alt="" />
                                 </Popup>
                             </Marker>
                         ))}

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
+import { authService } from '../services/authService';
 
 const RegisterPage = () => {
     const [formData, setFormData] = useState({
@@ -12,6 +14,10 @@ const RegisterPage = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [acceptTerms, setAcceptTerms] = useState(false);
+    const [error, setError] = useState('');
+
+    const navigate = useNavigate();
+    const login = useAuthStore((state) => state.login);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({
@@ -22,14 +28,38 @@ const RegisterPage = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
+
         if (formData.password !== formData.confirmPassword) {
-            alert('รหัสผ่านไม่ตรงกัน');
+            setError('รหัสผ่านไม่ตรงกัน');
             return;
         }
+
+        if (formData.password.length < 8) {
+            setError('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+            return;
+        }
+
         setIsLoading(true);
-        // TODO: Implement register logic
-        console.log('Register:', formData);
-        setTimeout(() => setIsLoading(false), 1000);
+
+        try {
+            const response = await authService.register(
+                formData.name,
+                formData.email,
+                formData.password
+            );
+            login(response);
+            navigate('/');
+        } catch (err: unknown) {
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosError = err as { response?: { data?: { error?: string } } };
+                setError(axiosError.response?.data?.error || 'สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+            } else {
+                setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+            }
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -54,6 +84,16 @@ const RegisterPage = () => {
                         <h1 className="text-2xl font-bold text-gray-800">สร้างบัญชีใหม่</h1>
                         <p className="text-gray-500 mt-2">เริ่มต้นใช้งานระบบติดตามระดับน้ำ</p>
                     </div>
+
+                    {/* Error Message */}
+                    {error && (
+                        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+                            <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p className="text-red-600 text-sm">{error}</p>
+                        </div>
+                    )}
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
 
 const Header = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { user, logout } = useAuthStore();
 
     return (
         <header className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 shadow-lg sticky top-0 z-50">
@@ -109,7 +111,12 @@ const Header = () => {
                         </button>
                     </div>
                 </div>
-
+                <div>
+                    <nav className='text-white'>
+                        {user && <span>สวัสดี, {user.name}</span>}
+                        <button className='hover:cursor-pointer' onClick={logout}>Logout</button>
+                    </nav>
+                </div>
                 {isMenuOpen && (
                     <div className="md:hidden py-4 border-t border-white/10">
                         <nav className="flex flex-col space-y-3">

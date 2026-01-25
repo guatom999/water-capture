@@ -13,6 +13,7 @@ type (
 		Server   Server
 		Database Database
 		App      App
+		JWT      JWT
 	}
 
 	Server struct {
@@ -32,6 +33,12 @@ type (
 		BaseURL            string
 		UploadDir          string
 		ImageProcessingDir string
+	}
+
+	JWT struct {
+		Secret             string
+		AccessTokenExpiry  int // in minutes
+		RefreshTokenExpiry int // in days
 	}
 )
 
@@ -70,6 +77,29 @@ func LoadConfig(path string) *Config {
 			}(),
 			UploadDir:          os.Getenv("UPLOAD_DIR"),
 			ImageProcessingDir: os.Getenv("IMAGE_PROCESSING_DIR"),
+		},
+		JWT: JWT{
+			Secret: func() string {
+				secret := os.Getenv("JWT_SECRET")
+				if secret == "" {
+					return "your-super-secret-key-change-in-production"
+				}
+				return secret
+			}(),
+			AccessTokenExpiry: func() int {
+				expiry, err := strconv.Atoi(os.Getenv("ACCESS_TOKEN_EXPIRY"))
+				if err != nil {
+					return 15 // default 15 minutes
+				}
+				return expiry
+			}(),
+			RefreshTokenExpiry: func() int {
+				expiry, err := strconv.Atoi(os.Getenv("REFRESH_TOKEN_EXPIRY"))
+				if err != nil {
+					return 1 // default 1 day
+				}
+				return expiry
+			}(),
 		},
 	}
 }
