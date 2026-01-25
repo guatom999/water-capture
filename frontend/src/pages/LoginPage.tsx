@@ -1,18 +1,37 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
+import { authService } from '../services/authService';
+import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+    const navigate = useNavigate();
+    const login = useAuthStore((state) => state.login)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
         setIsLoading(true);
-        // TODO: Implement login logic
-        console.log('Login:', { email, password });
-        setTimeout(() => setIsLoading(false), 1000);
+
+        try {
+            const response = await authService.login(email, password);
+            login(response);
+            navigate('/');
+        } catch (err: unknown) {
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosError = err as { response?: { data?: { error?: string } } };
+                setError(axiosError.response?.data?.error || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+            } else {
+                setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+            }
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -36,6 +55,16 @@ const LoginPage = () => {
                         <h1 className="text-2xl font-bold text-gray-800">ยินดีต้อนรับกลับ</h1>
                         <p className="text-gray-500 mt-2">เข้าสู่ระบบเพื่อจัดการข้อมูลระดับน้ำ</p>
                     </div>
+
+                    {/* Error Message */}
+                    {error && (
+                        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+                            <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p className="text-red-600 text-sm">{error}</p>
+                        </div>
+                    )}
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-5">
