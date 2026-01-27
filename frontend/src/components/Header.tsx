@@ -58,29 +58,53 @@ const Header = () => {
                     </nav>
 
                     <div className="flex items-center space-x-4">
-                        <Link
-                            to="/login"
-                            className="bg-white text-blue-700 px-5 py-2 rounded-lg font-semibold text-sm 
-                                       hover:bg-blue-50 transition-all duration-200 shadow-md hover:shadow-lg
-                                       transform hover:-translate-y-0.5 active:translate-y-0"
-                        >
-                            <span className="flex items-center space-x-2">
-                                <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
+                        {user ? (
+                            // ✅ Logged in - show user info + logout
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 text-white">
+                                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                    </div>
+                                    <span className="text-sm font-medium hidden sm:block">
+                                        {user.name}
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={logout}
+                                    className="bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium
+                                             hover:bg-white/30 transition-all duration-200 cursor-pointer"
                                 >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-                                    />
-                                </svg>
-                                <span>เข้าสู่ระบบ</span>
-                            </span>
-                        </Link>
+                                    ออกจากระบบ
+                                </button>
+                            </div>
+                        ) : (
+                            // ❌ Not logged in - show login button
+                            <Link
+                                to="/login"
+                                className="bg-white text-blue-700 px-5 py-2 rounded-lg font-semibold text-sm 
+                                           hover:bg-blue-50 transition-all duration-200 shadow-md hover:shadow-lg
+                                           transform hover:-translate-y-0.5 active:translate-y-0"
+                            >
+                                <span className="flex items-center space-x-2">
+                                    <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                                        />
+                                    </svg>
+                                    <span>เข้าสู่ระบบ</span>
+                                </span>
+                            </Link>
+                        )}
 
                         <button
                             className="md:hidden text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
@@ -110,12 +134,6 @@ const Header = () => {
                             </svg>
                         </button>
                     </div>
-                </div>
-                <div>
-                    <nav className='text-white'>
-                        {user && <span>สวัสดี, {user.name}</span>}
-                        <button className='hover:cursor-pointer' onClick={logout}>Logout</button>
-                    </nav>
                 </div>
                 {isMenuOpen && (
                     <div className="md:hidden py-4 border-t border-white/10">
