@@ -77,20 +77,81 @@ const MapSection = () => {
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
 
-                        {mapData.markers.map((marker: MarkersWithLocation) => (
-                            <Marker key={marker.location_id} position={[marker.latitude, marker.longitude]}>
-                                <Popup>
-                                    <Link to={`/markers/detail?location_id=${marker.location_id}`}>
-                                        <div className="font-bold">{marker.location_name}</div>
-                                    </Link>
-                                    <div className="whitespace-pre-line">{marker.note}</div>
-                                    <div className="text-sm text-gray-600 mt-2">
-                                        Level: {marker.level_cm} cm
-                                    </div>
-                                    <img src={marker.image} alt="" />
-                                </Popup>
-                            </Marker>
-                        ))}
+                        {mapData.markers.map((marker: MarkersWithLocation) => {
+                            // Helper functions for this marker
+                            const getDangerInfo = (danger: string | null) => {
+                                switch (danger?.toUpperCase()) {
+                                    case 'CRITICAL':
+                                        return { bgColor: 'bg-red-500', text: 'วิกฤต' };
+                                    case 'DANGER':
+                                        return { bgColor: 'bg-orange-500', text: 'อันตราย' };
+                                    case 'WATCH':
+                                        return { bgColor: 'bg-yellow-500', text: 'เฝ้าระวัง' };
+                                    case 'SAFE':
+                                        return { bgColor: 'bg-green-500', text: 'ปลอดภัย' };
+                                    default:
+                                        return { bgColor: 'bg-gray-400', text: 'ไม่ทราบ' };
+                                }
+                            };
+
+                            const formatTime = (dateString: string | null) => {
+                                if (!dateString) return 'N/A';
+                                return new Date(dateString).toLocaleString('th-TH', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                });
+                            };
+
+                            const dangerInfo = getDangerInfo(marker.danger);
+
+                            return (
+                                <Marker key={marker.location_id} position={[marker.latitude, marker.longitude]}>
+                                    <Popup className="custom-popup" minWidth={260} maxWidth={300}>
+                                        <div className="p-0 -m-3">
+                                            {/* Header */}
+                                            <div className="p-3 border-b border-gray-200">
+                                                <div className="font-bold text-gray-800">{marker.location_name}</div>
+                                                <div className="flex items-center gap-1 mt-1">
+                                                    <span className={`w-2 h-2 rounded-full ${dangerInfo.bgColor}`}></span>
+                                                    <span className="text-xs text-gray-600">{dangerInfo.text}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Water Level Info */}
+                                            <div className="p-3">
+                                                <div className="text-center mb-3">
+                                                    <div className="text-2xl font-bold text-blue-600">
+                                                        {(marker.level_cm / 100).toFixed(2)} m
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        ระดับตลิ่ง: {marker.bank_level?.toFixed(2) || '?'} m
+                                                    </div>
+                                                </div>
+
+                                                {/* Status row */}
+                                                <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                                                    <span>อัพเดท: {formatTime(marker.measured_at)}</span>
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${marker.is_flooded ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                                        {marker.is_flooded ? 'น้ำท่วม' : 'ปกติ'}
+                                                    </span>
+                                                </div>
+
+                                                {/* Action Button */}
+                                                <Link
+                                                    to={`/markers/detail?location_id=${marker.location_id}`}
+                                                    className="block w-full text-center bg-blue-500 text-white py-2 px-4 rounded text-sm font-medium hover:bg-blue-600 transition-colors"
+                                                    style={{
+                                                        color: 'white'
+                                                    }}
+                                                >
+                                                    ดูรายละเอียด
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    </Popup>
+                                </Marker>
+                            );
+                        })}
                     </MapContainer>
                 </div>
             </div>

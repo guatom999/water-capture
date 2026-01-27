@@ -32,6 +32,7 @@ export interface MarkersWithLocation {
     latitude: number,
     longitude: number,
     is_active: boolean,
+    bank_level: number,
     water_level_id: string,
     level_cm: number,
     image: string,
