@@ -46,12 +46,13 @@ func (c *WaterJob) ScheduleGetWaterLevel(ctx context.Context) {
 		fileName = waterLevel.Image
 		locationID = int(waterLevel.LocationID)
 
-		if waterLevel.Danger == "DANGER" || waterLevel.Danger == "WATCH" || waterLevel.Danger == "SAFE" {
+		if waterLevel.Danger == "DANGER" || waterLevel.Danger == "WATCH" {
 
 			payload := tasks.WaterAlertPayload{
 				LocationID:   int(waterLevel.LocationID),
 				LocationName: waterLevel.Source.String,
 				ShoreLevel:   1.29,
+				Status:       waterLevel.Danger,
 				WaterLevel:   waterLevel.LevelCm,
 				Description:  waterLevel.Note,
 				MeasuredAt:   utils.ParseTimeToString(waterLevel.MeasuredAt),

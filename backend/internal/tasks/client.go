@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -25,6 +26,8 @@ func (p *NotificationProducer) EnqueueWaterAlert(payload WaterAlertPayload) erro
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("Enqueueing water alert for location:", payload)
 
 	task := asynq.NewTask(TypeWaterAlert, data,
 		asynq.MaxRetry(3),

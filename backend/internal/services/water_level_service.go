@@ -133,10 +133,6 @@ func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) (*entitie
 
 	fileName := utils.GenerateFileName()
 
-	// if err := utils.CaptureWaterImage(s.cfg.App.ImageProcessingDir, fileName); err != nil {
-	// 	return nil, err
-	// }
-
 	apiResponse := new(models.ThaiWaterAPIResponse)
 
 	if err := utils.Get("https://api-v3.thaiwater.net/api/v1/thaiwater30/provinces/waterlevel?province_code=13", apiResponse); err != nil {
@@ -151,9 +147,8 @@ func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) (*entitie
 
 	entity := &entities.WaterLevel{
 		LocationID: 28,
-		LevelCm:    utils.ConvertStringToFloat64(apiResponse.Data[0].WaterlevelMSL) * 100,
-		// Image:      fileName,
-		Image: "",
+		LevelCm:    utils.ConvertStringToFloat64(apiResponse.Data[0].WaterlevelMSL),
+		Image:      "",
 		Danger: func() string {
 			if utils.ConvertStringToFloat64(apiResponse.Data[0].WaterlevelMSL) < 1 {
 				return "SAFE"
