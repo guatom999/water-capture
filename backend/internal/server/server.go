@@ -51,12 +51,24 @@ func (s *Server) WaterModules() {
 	service := services.NewWaterLevelService(repo, s.cfg.App.BaseURL, s.cfg)
 	handler := handlers.NewMapHandler(service)
 
+	//schedule manual
+	scheduleService := services.NewWaterLevelService(repo, s.cfg.App.BaseURL, s.cfg)
+
 	s.echo.GET("/heath", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, "OK")
 	})
 
 	s.echo.GET("/markers", handler.GetMapMarkers)
 	s.echo.GET("/markers/detail", handler.GetSectionDetail)
+
+	//test
+	s.echo.GET("/test_manual_get_schedule", func(e echo.Context) error {
+
+		scheduleService.ScheduleGetWaterLevel(context.Background())
+
+		return nil
+	})
+
 }
 
 func (s *Server) ImageModules() {

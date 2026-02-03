@@ -71,7 +71,7 @@ type PredictWater struct {
 }
 
 type LocationWithWaterLevel struct {
-	LocationID          int64   `db:"location_id"`
+	StationID           int64   `db:"station_id"`
 	LocationName        string  `db:"location_name"`
 	LocationDescription string  `db:"location_description"`
 	Latitude            float64 `db:"latitude"`
@@ -89,21 +89,23 @@ type LocationWithWaterLevel struct {
 }
 
 type LocationWithWaterLevelRes struct {
-	LocationID          int64   `json:"location_id"`
-	LocationName        string  `json:"location_name"`
-	LocationDescription string  `json:"location_description"`
-	Latitude            float64 `json:"latitude"`
-	Longitude           float64 `json:"longitude"`
-	IsActive            bool    `json:"is_active"`
-	BankLevel           float64 `json:"bank_level"`
-
-	WaterLevelID *int64   `json:"water_level_id"`
-	LevelCm      *float64 `json:"level_cm"`
-	Image        *string  `json:"image"`
-	Danger       *string  `json:"danger"`
-	IsFlooded    *bool    `json:"is_flooded"`
-	MeasuredAt   string   `json:"measured_at"`
-	Note         *string  `json:"note"`
+	StationID           int64    `json:"station_id"`
+	LocationName        string   `json:"location_name"`
+	LocationDescription string   `json:"location_description"`
+	Latitude            float64  `json:"latitude"`
+	Longitude           float64  `json:"longitude"`
+	IsActive            bool     `json:"is_active"`
+	BankLevel           float64  `json:"bank_level"`
+	WaterLevelID        *int64   `json:"water_level_id"`
+	LevelCm             *float64 `json:"level_cm"`
+	Image               *string  `json:"image"`
+	Danger              *string  `json:"danger"`
+	IsFlooded           *bool    `json:"is_flooded"`
+	MeasuredAt          string   `json:"measured_at"`
+	Note                *string  `json:"note"`
+	StationName         string   `json:"station_name"`
+	StationLatitude     string   `json:"station_lat"`
+	StationLongtitude   string   `json:"station_long"`
 }
 
 type WaterLocationDetailRes struct {

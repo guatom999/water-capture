@@ -19,7 +19,9 @@ type WaterLevelRepositoryInterface interface {
 	// GetLatest(ctx context.Context) (*models.WaterLevel, error)
 	GetAll(ctx context.Context, limit int) ([]models.LocationWithWaterLevel, error)
 	GetByLocationID(ctx context.Context, locationID int) ([]*entities.WaterLevel, error)
-	CreateWaterLevel(ctx context.Context, req *entities.WaterLevel) error
+	CreateWaterLevel(ctx context.Context, req []*entities.WaterLevel) error
+	CreateProvince(ctx context.Context, req []*entities.Province) error
+	CreateStationLocation(ctx context.Context, req []*entities.Location) error
 	// DeleteOldestWaterLevels(ctx context.Context, locationID int, keepLatest int) error
 
 	MarkForDeletion(ctx context.Context, id int64, scheduledAt time.Time) error
@@ -50,7 +52,7 @@ func (r *waterLevelRepository) GetAll(pctx context.Context, limit int) ([]models
 
 	query := `
         SELECT DISTINCT ON (l.id)
-            l.id AS location_id,
+			l.station_id as station_id,
             l.name AS location_name,
             l.description AS location_description,
             l.latitude,
@@ -65,7 +67,7 @@ func (r *waterLevelRepository) GetAll(pctx context.Context, limit int) ([]models
             wl.measured_at,
             wl.note
         FROM locations l
-        LEFT JOIN water_levels wl ON l.id = wl.location_id
+        LEFT JOIN water_levels wl ON l.station_id = wl.station_id
         WHERE l.is_active = TRUE
         ORDER BY l.id, wl.measured_at DESC NULLS LAST
     `
@@ -81,15 +83,15 @@ func (r *waterLevelRepository) GetAll(pctx context.Context, limit int) ([]models
 
 }
 
-func (r *waterLevelRepository) GetByLocationID(ctx context.Context, locationID int) ([]*entities.WaterLevel, error) {
+func (r *waterLevelRepository) GetByLocationID(ctx context.Context, stationID int) ([]*entities.WaterLevel, error) {
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
 
-	query := `SELECT * FROM water_levels WHERE location_id = $1`
+	query := `SELECT * FROM water_levels WHERE station_id = $1`
 
 	result := make([]*entities.WaterLevel, 0)
-	if err := r.db.SelectContext(ctx, &result, query, locationID); err != nil {
+	if err := r.db.SelectContext(ctx, &result, query, stationID); err != nil {
 		log.Printf("Error failed to select from water_levels database %v", err.Error())
 		return nil, err
 	}
@@ -113,16 +115,114 @@ func (r *waterLevelRepository) GetLastWaterLevelWithLimit(ctx context.Context, l
 	return result, nil
 }
 
-func (r *waterLevelRepository) CreateWaterLevel(ctx context.Context, req *entities.WaterLevel) error {
+func (r *waterLevelRepository) CreateProvince(ctx context.Context, req []*entities.Province) error {
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
 
-	query := `INSERT INTO water_levels(location_id, level_cm, image, danger, is_flooded, source, measured_at, note, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	if len(req) == 0 {
+		return nil
+	}
 
-	_, err := r.db.ExecContext(ctx, query, req.LocationID, req.LevelCm, req.Image, req.Danger, req.IsFlooded, req.Source, req.MeasuredAt, req.Note, "ACTIVE")
+	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
-		log.Printf("Error failed to insert into water_levels database %v", err.Error())
+		log.Printf("Error failed to begin transaction %v", err.Error())
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	query := `INSERT INTO provinces(name, code) VALUES ($1, $2)`
+
+	for _, province := range req {
+		_, err = tx.ExecContext(ctx, query, province.Name, province.Code)
+		if err != nil {
+			log.Printf("Error failed to insert into provinces database for province_id %d: %v", province.ID, err.Error())
+			return err
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Printf("Error failed to commit transaction %v", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func (r *waterLevelRepository) CreateStationLocation(ctx context.Context, req []*entities.Location) error {
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+
+	if len(req) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		log.Printf("Error failed to begin transaction %v", err.Error())
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	query := `INSERT INTO locations(station_id, name, description, latitude, longitude, is_active, bank_level, province_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+
+	for _, location := range req {
+		_, err = tx.ExecContext(ctx, query, location.StationID, location.Name, location.Description, location.Latitude, location.Longitude, location.IsActive, location.BankLevel, location.ProvinceID)
+		if err != nil {
+			log.Printf("Error failed to insert into locations %v", err.Error())
+			return err
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Printf("Error failed to commit transaction %v", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func (r *waterLevelRepository) CreateWaterLevel(ctx context.Context, req []*entities.WaterLevel) error {
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+
+	if len(req) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		log.Printf("Error failed to begin transaction %v", err.Error())
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	query := `INSERT INTO water_levels(station_id, level_cm, image, danger, is_flooded, source, measured_at, note, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+
+	for _, waterLevel := range req {
+		_, err = tx.ExecContext(ctx, query, waterLevel.StationID, waterLevel.LevelCm, waterLevel.Image, waterLevel.Danger, waterLevel.IsFlooded, waterLevel.Source, waterLevel.MeasuredAt, waterLevel.Note, "ACTIVE")
+		if err != nil {
+			log.Printf("Error failed to insert into water_levels database %v", err.Error())
+			return err
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Printf("Error failed to commit transaction %v", err.Error())
 		return err
 	}
 

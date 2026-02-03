@@ -15,7 +15,7 @@ func Get(url string, result any) error {
 	}
 	defer response.Body.Close()
 
-	if err := json.NewDecoder(response.Body).Decode(result); err != nil {
+	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
 		return err
 	}
 
