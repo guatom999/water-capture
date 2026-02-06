@@ -111,8 +111,8 @@ type LocationWithWaterLevelRes struct {
 	// StationLongtitude   string   `json:"station_long"`
 }
 
-type WaterLocationDetailRes struct {
-	LocationID int64          `json:"location_id"`
+type LocationDetail struct {
+	// LocationID int64          `json:"location_id"`
 	LevelCm    float64        `json:"level_cm"`
 	Image      string         `json:"image"`
 	Danger     string         `json:"danger"`
@@ -120,4 +120,10 @@ type WaterLocationDetailRes struct {
 	Source     sql.NullString `json:"source"`
 	MeasuredAt time.Time      `json:"measured_at"`
 	Note       string         `json:"note"`
+}
+
+type WaterLocationDetailRes struct {
+	StationID int64            `json:"station_id"`
+	BankLevel float64          `json:"bank_level"`
+	Detail    []LocationDetail `json:"detail"`
 }

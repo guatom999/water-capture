@@ -17,8 +17,10 @@ type waterLevelRepository struct {
 // WaterLevelRepository interface
 type WaterLevelRepositoryInterface interface {
 	// GetLatest(ctx context.Context) (*models.WaterLevel, error)
+
 	GetAll(ctx context.Context, limit int) ([]models.LocationWithWaterLevel, error)
-	GetByLocationID(ctx context.Context, locationID int) ([]*entities.WaterLevel, error)
+	GetLocationByID(ctx context.Context, stationID int) (*entities.Location, error)
+	GetWaterLevelByID(ctx context.Context, locationID int) ([]*entities.WaterLevel, error)
 	CreateWaterLevel(ctx context.Context, req []*entities.WaterLevel) error
 	CreateProvince(ctx context.Context, req []*entities.Province) error
 	CreateStationLocation(ctx context.Context, req []*entities.Location) error
@@ -84,7 +86,23 @@ func (r *waterLevelRepository) GetAll(pctx context.Context, limit int) ([]models
 
 }
 
-func (r *waterLevelRepository) GetByLocationID(ctx context.Context, stationID int) ([]*entities.WaterLevel, error) {
+func (r *waterLevelRepository) GetLocationByID(ctx context.Context, stationID int) (*entities.Location, error) {
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+
+	query := `SELECT * FROM locations WHERE station_id = $1`
+
+	result := &entities.Location{}
+	if err := r.db.GetContext(ctx, result, query, stationID); err != nil {
+		log.Printf("Error failed to select from locations database %v", err.Error())
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (r *waterLevelRepository) GetWaterLevelByID(ctx context.Context, stationID int) ([]*entities.WaterLevel, error) {
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()

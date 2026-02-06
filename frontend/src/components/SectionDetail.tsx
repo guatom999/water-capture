@@ -12,7 +12,6 @@ const SectionDetail = () => {
     const [sectionDetail, setSectionDetail] = useState<WaterDetailResponse | null>(null);
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [dateRange, setDateRange] = useState<'all' | '1day' | '7days' | '30days'>('1day');
-    const [bankLevel] = useState<number>(1.29); // ระดับตลิ่ง (สามารถดึงจาก API ได้)
 
     const getSectionDetail = async () => {
         if (stationId) {
@@ -25,13 +24,16 @@ const SectionDetail = () => {
         getSectionDetail();
     }, [stationId]);
 
+    // Get bank level from API
+    const bankLevel = sectionDetail?.markers?.bank_level ?? 1.29;
+
     // Filter data by date range
     const filteredMarkers = useMemo(() => {
-        if (!sectionDetail?.markers) return [];
+        if (!sectionDetail?.markers?.detail) return [];
 
         const now = new Date();
 
-        return sectionDetail.markers.filter(marker => {
+        return sectionDetail.markers.detail.filter((marker: LocationDetail) => {
             if (!marker.measured_at) return false;
             const markerDate = new Date(marker.measured_at);
 
@@ -49,14 +51,14 @@ const SectionDetail = () => {
                     return true;
             }
         });
-    }, [sectionDetail?.markers, dateRange]);
+    }, [sectionDetail?.markers?.detail, dateRange]);
 
     // Calculate statistics
     const statistics = useMemo(() => {
         if (filteredMarkers.length === 0) return null;
 
         const levels = filteredMarkers
-            .map(m => m.level_cm)
+            .map((m: LocationDetail) => m.level_cm)
             .filter((l): l is number => l !== null);
 
         if (levels.length === 0) return null;
@@ -64,7 +66,7 @@ const SectionDetail = () => {
         return {
             max: Math.max(...levels),
             min: Math.min(...levels),
-            avg: levels.reduce((a, b) => a + b, 0) / levels.length,
+            avg: levels.reduce((a: number, b: number) => a + b, 0) / levels.length,
             count: levels.length
         };
     }, [filteredMarkers]);
@@ -74,6 +76,34 @@ const SectionDetail = () => {
             console.log('Markers data:', sectionDetail.markers);
         }
     }, [sectionDetail]);
+
+    // Generate Y-axis ticks: 0, 0.5, 1.0... up to bankLevel, then bankLevel, then .0/.5 up to bankLevel + 1
+    const generateYAxisTicks = (bankLevelValue: number): number[] => {
+        const ticks: number[] = [];
+        const maxValue = bankLevelValue + 1;
+
+        // Add ticks at 0.5 intervals from 0 up to (but not exceeding) bankLevel
+        for (let i = 0; i <= maxValue; i += 0.5) {
+            const rounded = Math.round(i * 10) / 10;
+            if (rounded < bankLevelValue) {
+                ticks.push(rounded);
+            }
+        }
+
+        // Add the exact bankLevel value
+        ticks.push(bankLevelValue);
+
+        // Add .0 and .5 ticks above bankLevel up to bankLevel + 1
+        const nextHalf = Math.ceil(bankLevelValue * 2) / 2;
+        for (let i = nextHalf; i <= maxValue; i += 0.5) {
+            const rounded = Math.round(i * 10) / 10;
+            if (rounded > bankLevelValue && !ticks.includes(rounded)) {
+                ticks.push(rounded);
+            }
+        }
+
+        return ticks.sort((a, b) => a - b);
+    };
 
     const getDangerColor = (danger: string | null) => {
         switch (danger?.toUpperCase()) {
@@ -148,7 +178,7 @@ const SectionDetail = () => {
 
             {sectionDetail ? (
                 <div className="container mx-auto px-4 py-8">
-                    {sectionDetail.markers.length === 0 ? (
+                    {sectionDetail.markers.detail.length === 0 ? (
                         <div className="bg-white rounded-lg shadow-md p-8 text-center">
                             <div className="text-gray-400 text-6xl mb-4"></div>
                             <p className="text-gray-600 text-lg">No water level data found for this location.</p>
@@ -228,6 +258,7 @@ const SectionDetail = () => {
                                                         hour: '2-digit',
                                                         minute: '2-digit'
                                                     }) : 'N/A',
+                                                    bankLevel: sectionDetail.markers.bank_level,
                                                     level: m.level_cm,
                                                     danger: m.danger
                                                 }))
@@ -241,8 +272,8 @@ const SectionDetail = () => {
                                             />
                                             <YAxis
                                                 tick={{ fontSize: 12 }}
-                                                domain={[0, 2]}
-                                                ticks={[0, 0.5, 1, 1.29, 1.5, 2.0]}
+                                                domain={[0, sectionDetail.markers.bank_level + 1]}
+                                                ticks={generateYAxisTicks(sectionDetail.markers.bank_level)}
                                                 label={{ value: 'MSL', angle: -90, position: 'insideLeft' }}
                                             />
                                             <ReferenceLine
@@ -283,9 +314,9 @@ const SectionDetail = () => {
                                                     const { cx, cy, payload } = props as { cx?: number; cy?: number; payload?: { level: number } };
                                                     if (cx === undefined || cy === undefined || !payload) return null;
                                                     let color = '#3b82f6'; // blue - safe
-                                                    if (payload.level > 1.29) {
+                                                    if (payload.level > bankLevel) {
                                                         color = '#ef4444'; // red - danger
-                                                    } else if (payload.level > 1.0) {
+                                                    } else if (payload.level > bankLevel - 0.25) {
                                                         color = '#eab308'; // yellow - warning
                                                     }
                                                     return (
@@ -314,10 +345,8 @@ const SectionDetail = () => {
                                 </div>
                             </div>
 
-                            {/* Data Table by Date */}
-                            {groupByDate(sectionDetail.markers).map(([dateKey, markers]) => (
+                            {/* {groupByDate(sectionDetail.markers.detail).map(([dateKey, markers]) => (
                                 <div key={dateKey} className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-                                    {/* Date Header */}
                                     <div
                                         className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 flex items-center justify-between cursor-pointer"
                                         onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
@@ -331,7 +360,6 @@ const SectionDetail = () => {
                                         </span>
                                     </div>
 
-                                    {/* Table Header */}
                                     <div className="bg-gray-50 px-6 py-3 grid grid-cols-10 gap-4 text-sm font-semibold text-gray-600 border-b">
                                         <div className="col-span-2">เวลา</div>
                                         <div className="col-span-3">Water Level</div>
@@ -339,19 +367,16 @@ const SectionDetail = () => {
                                         <div className="col-span-3">Flood</div>
                                     </div>
 
-                                    {/* Table Body */}
                                     <div className="divide-y divide-gray-100">
-                                        {markers.map((marker: LocationDetail) => (
+                                        {markers.map((marker: LocationDetail, index: number) => (
                                             <div
-                                                key={marker.location_id}
+                                                key={`${marker.measured_at}-${index}`}
                                                 className="px-6 py-4 grid grid-cols-10 gap-4 items-center hover:bg-blue-50 transition-colors"
                                             >
-                                                {/* Time */}
                                                 <div className="col-span-2 text-gray-700 font-medium">
                                                     {formatTime(marker.measured_at)}
                                                 </div>
 
-                                                {/* Water Level */}
                                                 <div className="col-span-3">
                                                     <span className="text-2xl font-bold text-blue-600">
                                                         {marker.level_cm ? marker.level_cm.toFixed(2) : 'N/A'}
@@ -359,7 +384,6 @@ const SectionDetail = () => {
                                                     <span className="text-sm text-gray-500 ml-1">MSL</span>
                                                 </div>
 
-                                                {/* Danger Status */}
                                                 <div className="col-span-2">
                                                     {marker.danger ? (
                                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getDangerColor(marker.danger)}`}>
@@ -370,7 +394,6 @@ const SectionDetail = () => {
                                                     )}
                                                 </div>
 
-                                                {/* Flood Status */}
                                                 <div className="col-span-3">
                                                     {marker.is_flooded !== null ? (
                                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${marker.is_flooded ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
@@ -384,7 +407,7 @@ const SectionDetail = () => {
                                         ))}
                                     </div>
                                 </div>
-                            ))}
+                            ))} */}
                         </div>
                     )}
                 </div>

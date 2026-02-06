@@ -25,7 +25,7 @@ type waterLevelService struct {
 type WaterLevelServiceInterface interface {
 	// ProcessImage(ctx context.Context, imageURL string) (*models.WaterLevel, error)
 	GetAllLocations(ctx context.Context, limit int) ([]models.LocationWithWaterLevelRes, error)
-	GetByLocationID(ctx context.Context, id string) ([]*models.WaterLocationDetailRes, error)
+	GetByLocationID(ctx context.Context, id string) (*models.WaterLocationDetailRes, error)
 	ScheduleGetWaterLevel(ctx context.Context) ([]*entities.WaterLevel, error)
 	CreateWaterLevel(ctx context.Context, req *models.CreateWaterLevelReq) error
 
@@ -84,23 +84,34 @@ func (s *waterLevelService) GetAllLocations(ctx context.Context, limit int) ([]m
 	return locationsRes, nil
 }
 
-func (s *waterLevelService) GetByLocationID(ctx context.Context, id string) ([]*models.WaterLocationDetailRes, error) {
+func (s *waterLevelService) GetByLocationID(ctx context.Context, id string) (*models.WaterLocationDetailRes, error) {
 
 	stationID, err := strconv.Atoi(id)
 	if err != nil {
 		return nil, err
 	}
 
-	waterLevelsRes := make([]*models.WaterLocationDetailRes, 0)
+	// waterLevelsRes := make([]*models.WaterLocationDetailRes, 0)
+	waterLevelsRes := &models.WaterLocationDetailRes{
+		StationID: int64(stationID),
+		Detail:    make([]models.LocationDetail, 0),
+	}
 
-	results, err := s.repo.GetByLocationID(ctx, stationID)
+	location, err := s.repo.GetLocationByID(ctx, stationID)
 	if err != nil {
 		return nil, err
 	}
 
+	results, err := s.repo.GetWaterLevelByID(ctx, stationID)
+	if err != nil {
+		return nil, err
+	}
+
+	waterLevelsRes.StationID = results[0].StationID
+	waterLevelsRes.BankLevel = location.BankLevel
+
 	for _, res := range results {
-		waterLevelsRes = append(waterLevelsRes, &models.WaterLocationDetailRes{
-			LocationID: res.StationID,
+		waterLevelsRes.Detail = append(waterLevelsRes.Detail, models.LocationDetail{
 			LevelCm:    res.LevelCm,
 			Image:      res.Image,
 			Danger:     res.Danger,
