@@ -4,3 +4,42 @@
 @tailwind components;
 @tailwind utilities; */
 
+/* Bangkok Boundary Tooltip Styles */
+.bangkok-tooltip {
+  background-color: white;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px 12px;
+  font-family: 'Noto Sans Thai', sans-serif;
+}
+
+.bangkok-tooltip .leaflet-tooltip-content {
+  margin: 0;
+}
+
+.leaflet-tooltip-top:before {
+  display: none;
+}
+
+/* Remove black outline when clicking on GeoJSON */
+.leaflet-interactive:focus {
+  outline: none;
+}
+
+.leaflet-container path {
+  outline: none !important;
+}
+
+/* Province tooltip styles */
+.province-tooltip {
+  background-color: white;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 0;
+}
+
+.province-tooltip .leaflet-tooltip-content {
+  margin: 0;
+}

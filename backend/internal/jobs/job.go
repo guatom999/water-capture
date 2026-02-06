@@ -37,31 +37,34 @@ func (c *WaterJob) ScheduleGetWaterLevel(ctx context.Context) {
 
 	c.cron.AddFunc("0 */10 * * * *", func() {
 		time.Sleep(time.Second * 10)
-		waterLevel, err := c.service.ScheduleGetWaterLevel(ctx)
+		waterLevels, err := c.service.ScheduleGetWaterLevel(ctx)
 		if err != nil {
 			log.Println("failed to schedule get water level", err)
 			return
 		}
 
-		fileName = waterLevel.Image
-		locationID = int(waterLevel.StationID)
+		// fileName = waterLevel.Image
+		// locationID = int(waterLevel.StationID)
 
-		if waterLevel.Danger == "DANGER" || waterLevel.Danger == "WATCH" {
+		for _, waterLevel := range waterLevels {
+			if waterLevel.Danger == "DANGER" || waterLevel.Danger == "WATCH" {
 
-			payload := tasks.WaterAlertPayload{
-				LocationID:   int(waterLevel.StationID),
-				LocationName: waterLevel.Source.String,
-				ShoreLevel:   1.29,
-				Status:       waterLevel.Danger,
-				WaterLevel:   waterLevel.LevelCm,
-				Description:  waterLevel.Note,
-				MeasuredAt:   utils.ParseTimeToString(waterLevel.MeasuredAt),
-			}
+				payload := tasks.WaterAlertPayload{
+					LocationID:   int(waterLevel.StationID),
+					LocationName: waterLevel.Source.String,
+					// ShoreLevel:   1.29,
+					Status:      waterLevel.Danger,
+					WaterLevel:  waterLevel.LevelCm,
+					Description: waterLevel.Note,
+					MeasuredAt:  utils.ParseTimeToString(waterLevel.MeasuredAt),
+				}
 
-			if err := c.producer.EnqueueWaterAlert(payload); err != nil {
-				log.Printf("[CRON] Failed to enqueue alert: %v", err)
+				if err := c.producer.EnqueueWaterAlert(payload); err != nil {
+					log.Printf("[CRON] Failed to enqueue alert: %v", err)
+				}
 			}
 		}
+
 	})
 
 	_ = fileName

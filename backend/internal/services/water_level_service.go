@@ -26,7 +26,7 @@ type WaterLevelServiceInterface interface {
 	// ProcessImage(ctx context.Context, imageURL string) (*models.WaterLevel, error)
 	GetAllLocations(ctx context.Context, limit int) ([]models.LocationWithWaterLevelRes, error)
 	GetByLocationID(ctx context.Context, id string) ([]*models.WaterLocationDetailRes, error)
-	ScheduleGetWaterLevel(ctx context.Context) (*entities.WaterLevel, error)
+	ScheduleGetWaterLevel(ctx context.Context) ([]*entities.WaterLevel, error)
 	CreateWaterLevel(ctx context.Context, req *models.CreateWaterLevelReq) error
 
 	ScheduleDeleteWaterLevel(ctx context.Context, fileName string, locationID int) error
@@ -60,6 +60,7 @@ func (s *waterLevelService) GetAllLocations(ctx context.Context, limit int) ([]m
 			StationID:           v.StationID,
 			LocationName:        v.LocationName,
 			LocationDescription: v.LocationDescription,
+			ProvinceID:          v.ProvinceID,
 			Latitude:            v.Latitude,
 			Longitude:           v.Longitude,
 			IsActive:            v.IsActive,
@@ -129,7 +130,7 @@ func (s *waterLevelService) CreateWaterLevel(ctx context.Context, req *models.Cr
 	return nil
 }
 
-func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) (*entities.WaterLevel, error) {
+func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) ([]*entities.WaterLevel, error) {
 
 	fileName := utils.GenerateFileName()
 
@@ -214,7 +215,7 @@ func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) (*entitie
 		return nil, err
 	}
 
-	return nil, nil
+	return waterLevels, nil
 }
 
 func (s *waterLevelService) ScheduleDeleteWaterLevel(ctx context.Context, fileName string, locationID int) error {

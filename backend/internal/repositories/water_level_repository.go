@@ -55,6 +55,7 @@ func (r *waterLevelRepository) GetAll(pctx context.Context, limit int) ([]models
 			l.station_id as station_id,
             l.name AS location_name,
             l.description AS location_description,
+			l.province_id,
             l.latitude,
             l.longitude,
             l.is_active,

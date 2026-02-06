@@ -45,9 +45,9 @@ func (h *waterLevelHandler) GetSectionDetail(c echo.Context) error {
 
 	ctx := context.Background()
 
-	locationID := c.QueryParam("location_id")
+	stationID := c.QueryParam("station_id")
 
-	markers, err := h.service.GetByLocationID(ctx, locationID)
+	markers, err := h.service.GetByLocationID(ctx, stationID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]any{
 			"error": err.Error(),

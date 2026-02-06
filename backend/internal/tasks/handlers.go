@@ -39,9 +39,9 @@ func (h *NotificationHandler) HandleWaterAlert(ctx context.Context, t *asynq.Tas
 		LocationID:   payload.LocationID,
 		LocationName: payload.LocationName,
 		WaterLevel:   payload.WaterLevel,
-		ShoreLevel:   payload.ShoreLevel,
-		Status:       payload.Status,
-		MeasuredAt:   payload.MeasuredAt,
+		// ShoreLevel:   payload.ShoreLevel,
+		Status:     payload.Status,
+		MeasuredAt: payload.MeasuredAt,
 	}
 
 	// Broadcast ไปที่ webhook โดยตรง (ไม่ต้องเช็ค subscription)

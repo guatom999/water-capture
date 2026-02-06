@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react"
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, Brush } from 'recharts';
 import Footer from "./Footer";
 import { getMapMarkerDetailService } from "../services/waterLevelService";
@@ -7,38 +7,38 @@ import type { LocationDetail, WaterDetailResponse } from "../types/waterDetail";
 
 const SectionDetail = () => {
     const [searchParams] = useSearchParams();
-    const locationId = searchParams.get('location_id');
+    const stationId = searchParams.get('station_id');
 
     const [sectionDetail, setSectionDetail] = useState<WaterDetailResponse | null>(null);
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-    const [dateRange, setDateRange] = useState<'all' | 'today' | '7days' | '30days'>('all');
-    const [bankLevel] = useState<number>(129); // ระดับตลิ่ง (สามารถดึงจาก API ได้)
+    const [dateRange, setDateRange] = useState<'all' | '1day' | '7days' | '30days'>('1day');
+    const [bankLevel] = useState<number>(1.29); // ระดับตลิ่ง (สามารถดึงจาก API ได้)
 
     const getSectionDetail = async () => {
-        if (locationId) {
-            const response = await getMapMarkerDetailService(Number(locationId));
+        if (stationId) {
+            const response = await getMapMarkerDetailService(stationId);
             setSectionDetail(response as WaterDetailResponse)
         }
     };
 
     useEffect(() => {
         getSectionDetail();
-    }, [locationId]);
+    }, [stationId]);
 
     // Filter data by date range
     const filteredMarkers = useMemo(() => {
         if (!sectionDetail?.markers) return [];
 
         const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         return sectionDetail.markers.filter(marker => {
             if (!marker.measured_at) return false;
             const markerDate = new Date(marker.measured_at);
 
             switch (dateRange) {
-                case 'today':
-                    return markerDate >= todayStart;
+                case '1day':
+                    const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+                    return markerDate >= oneDayAgo;
                 case '7days':
                     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                     return markerDate >= sevenDaysAgo;
@@ -137,10 +137,13 @@ const SectionDetail = () => {
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
             {/* Header */}
             <div className="bg-blue-600 text-white py-8 shadow-lg">
-                <div className="container mx-auto px-4">
-                    <h1 className="text-3xl font-bold mb-2">Water Level Details</h1>
-                    <p className="text-blue-100">Location ID: {locationId}</p>
-                </div>
+                <Link to="/">
+                    <div className="container mx-auto px-4">
+                        <h1 className="text-3xl font-bold mb-2">Water Level Details</h1>
+                        <p className="text-blue-100">Station ID: {stationId}</p>
+                    </div>
+                </Link>
+
             </div>
 
             {sectionDetail ? (
@@ -159,7 +162,7 @@ const SectionDetail = () => {
                                     <div className="flex gap-2">
                                         {[
                                             { key: 'all', label: 'ทั้งหมด' },
-                                            { key: 'today', label: 'วันนี้' },
+                                            { key: '1day', label: '24 ชม.' },
                                             { key: '7days', label: '7 วัน' },
                                             { key: '30days', label: '30 วัน' }
                                         ].map(option => (
@@ -183,15 +186,15 @@ const SectionDetail = () => {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div className="bg-white rounded-xl shadow p-4 border border-gray-100">
                                         <div className="text-sm text-gray-500">ค่าสูงสุด</div>
-                                        <div className="text-2xl font-bold text-red-500">{statistics.max.toFixed(1)} cm</div>
+                                        <div className="text-2xl font-bold text-red-500">{statistics.max.toFixed(1)} MSL</div>
                                     </div>
                                     <div className="bg-white rounded-xl shadow p-4 border border-gray-100">
                                         <div className="text-sm text-gray-500">ค่าต่ำสุด</div>
-                                        <div className="text-2xl font-bold text-green-500">{statistics.min.toFixed(1)} cm</div>
+                                        <div className="text-2xl font-bold text-green-500">{statistics.min.toFixed(1)} MSL</div>
                                     </div>
                                     <div className="bg-white rounded-xl shadow p-4 border border-gray-100">
                                         <div className="text-sm text-gray-500">ค่าเฉลี่ย</div>
-                                        <div className="text-2xl font-bold text-blue-500">{statistics.avg.toFixed(1)} cm</div>
+                                        <div className="text-2xl font-bold text-blue-500">{statistics.avg.toFixed(1)} MSL</div>
                                     </div>
                                     <div className="bg-white rounded-xl shadow p-4 border border-gray-100">
                                         <div className="text-sm text-gray-500">จำนวนข้อมูล</div>
@@ -238,17 +241,17 @@ const SectionDetail = () => {
                                             />
                                             <YAxis
                                                 tick={{ fontSize: 12 }}
-                                                domain={[0, 200]}
-                                                ticks={[0, 50, 100, 129, 150, 200]}
-                                                label={{ value: 'cm', angle: -90, position: 'insideLeft' }}
+                                                domain={[0, 2]}
+                                                ticks={[0, 0.5, 1, 1.29, 1.5, 2.0]}
+                                                label={{ value: 'MSL', angle: -90, position: 'insideLeft' }}
                                             />
                                             <ReferenceLine
                                                 y={bankLevel}
                                                 stroke="#ef4444"
-                                                strokeDasharray="8 4"
+                                                strokeDasharray="4 4"
                                                 strokeWidth={2}
                                                 label={{
-                                                    value: `Bank Level (${bankLevel} cm)`,
+                                                    value: `Bank Level (${bankLevel} MSL)`,
                                                     position: 'insideTopRight',
                                                     fill: '#ef4444',
                                                     fontSize: 11
@@ -262,7 +265,7 @@ const SectionDetail = () => {
                                                             <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
                                                                 <p className="text-gray-600 text-sm mb-1">{data.fullDate}</p>
                                                                 <p className="font-bold text-blue-600">
-                                                                    ระดับน้ำ: {data.level} cm
+                                                                    ระดับน้ำ: {data.level} MSL
                                                                 </p>
                                                             </div>
                                                         );
@@ -280,9 +283,9 @@ const SectionDetail = () => {
                                                     const { cx, cy, payload } = props as { cx?: number; cy?: number; payload?: { level: number } };
                                                     if (cx === undefined || cy === undefined || !payload) return null;
                                                     let color = '#3b82f6'; // blue - safe
-                                                    if (payload.level > 129) {
+                                                    if (payload.level > 1.29) {
                                                         color = '#ef4444'; // red - danger
-                                                    } else if (payload.level > 100) {
+                                                    } else if (payload.level > 1.0) {
                                                         color = '#eab308'; // yellow - warning
                                                     }
                                                     return (
@@ -298,7 +301,7 @@ const SectionDetail = () => {
                                                     );
                                                 }}
                                                 activeDot={{ r: 7, fill: '#2563eb' }}
-                                                name="Water Level (cm)"
+                                                name="Water Level (MSL)"
                                             />
                                             <Brush
                                                 dataKey="time"
@@ -353,7 +356,7 @@ const SectionDetail = () => {
                                                     <span className="text-2xl font-bold text-blue-600">
                                                         {marker.level_cm ? marker.level_cm.toFixed(2) : 'N/A'}
                                                     </span>
-                                                    <span className="text-sm text-gray-500 ml-1">cm</span>
+                                                    <span className="text-sm text-gray-500 ml-1">MSL</span>
                                                 </div>
 
                                                 {/* Danger Status */}
