@@ -13,5 +13,4 @@ func main() {
 	db := database.DatabaseConnect(cfg)
 
 	server.NewServer(db, cfg).Start()
-
 }
