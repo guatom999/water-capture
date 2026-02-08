@@ -1,0 +1,52 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+
+env:
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  IMAGE_NAME: badzboss/waterlevel-broadcast
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+      - name: Build and Push API
+        run: |
+          docker build --target api -t $IMAGE_NAME:api-latest ./backend
+          docker push $IMAGE_NAME:api-latest
+
+      - name: Build and Push Cron
+        run: |
+          docker build --target cron -t $IMAGE_NAME:cron-latest ./backend
+          docker push $IMAGE_NAME:cron-latest
+
+      - name: Build and Push Worker
+        run: |
+          docker build --target worker -t $IMAGE_NAME:worker-latest ./backend
+          docker push $IMAGE_NAME:worker-latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /path/to/app
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f

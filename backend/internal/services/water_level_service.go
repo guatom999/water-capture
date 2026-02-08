@@ -25,8 +25,8 @@ type waterLevelService struct {
 type WaterLevelServiceInterface interface {
 	// ProcessImage(ctx context.Context, imageURL string) (*models.WaterLevel, error)
 	GetAllLocations(ctx context.Context, limit int) ([]models.LocationWithWaterLevelRes, error)
-	GetByLocationID(ctx context.Context, id string) ([]*models.WaterLocationDetailRes, error)
-	ScheduleGetWaterLevel(ctx context.Context) (*entities.WaterLevel, error)
+	GetByLocationID(ctx context.Context, id string) (*models.WaterLocationDetailRes, error)
+	ScheduleGetWaterLevel(ctx context.Context) ([]*entities.WaterLevel, error)
 	CreateWaterLevel(ctx context.Context, req *models.CreateWaterLevelReq) error
 
 	ScheduleDeleteWaterLevel(ctx context.Context, fileName string, locationID int) error
@@ -57,9 +57,10 @@ func (s *waterLevelService) GetAllLocations(ctx context.Context, limit int) ([]m
 	// }
 	for _, v := range locations {
 		locationsRes = append(locationsRes, models.LocationWithWaterLevelRes{
-			LocationID:          v.LocationID,
+			StationID:           v.StationID,
 			LocationName:        v.LocationName,
 			LocationDescription: v.LocationDescription,
+			ProvinceID:          v.ProvinceID,
 			Latitude:            v.Latitude,
 			Longitude:           v.Longitude,
 			IsActive:            v.IsActive,
@@ -83,23 +84,34 @@ func (s *waterLevelService) GetAllLocations(ctx context.Context, limit int) ([]m
 	return locationsRes, nil
 }
 
-func (s *waterLevelService) GetByLocationID(ctx context.Context, id string) ([]*models.WaterLocationDetailRes, error) {
+func (s *waterLevelService) GetByLocationID(ctx context.Context, id string) (*models.WaterLocationDetailRes, error) {
 
-	locationID, err := strconv.Atoi(id)
+	stationID, err := strconv.Atoi(id)
 	if err != nil {
 		return nil, err
 	}
 
-	waterLevelsRes := make([]*models.WaterLocationDetailRes, 0)
+	// waterLevelsRes := make([]*models.WaterLocationDetailRes, 0)
+	waterLevelsRes := &models.WaterLocationDetailRes{
+		StationID: int64(stationID),
+		Detail:    make([]models.LocationDetail, 0),
+	}
 
-	results, err := s.repo.GetByLocationID(ctx, locationID)
+	location, err := s.repo.GetLocationByID(ctx, stationID)
 	if err != nil {
 		return nil, err
 	}
+
+	results, err := s.repo.GetWaterLevelByID(ctx, stationID)
+	if err != nil {
+		return nil, err
+	}
+
+	waterLevelsRes.StationID = results[0].StationID
+	waterLevelsRes.BankLevel = location.BankLevel
 
 	for _, res := range results {
-		waterLevelsRes = append(waterLevelsRes, &models.WaterLocationDetailRes{
-			LocationID: res.LocationID,
+		waterLevelsRes.Detail = append(waterLevelsRes.Detail, models.LocationDetail{
 			LevelCm:    res.LevelCm,
 			Image:      res.Image,
 			Danger:     res.Danger,
@@ -114,68 +126,98 @@ func (s *waterLevelService) GetByLocationID(ctx context.Context, id string) ([]*
 
 func (s *waterLevelService) CreateWaterLevel(ctx context.Context, req *models.CreateWaterLevelReq) error {
 
-	if err := s.repo.CreateWaterLevel(ctx, &entities.WaterLevel{
-		LocationID: req.LocationID,
-		LevelCm:    req.LevelCm,
-		Image:      req.Image,
-		Danger:     req.Danger,
-		IsFlooded:  req.IsFlooded,
-		MeasuredAt: req.MeasuredAt,
-		Note:       req.Note,
-	}); err != nil {
-		return err
-	}
+	// if err := s.repo.CreateWaterLevel(ctx, &entities.WaterLevel{
+	// 	LocationID: req.LocationID,
+	// 	LevelCm:    req.LevelCm,
+	// 	Image:      req.Image,
+	// 	Danger:     req.Danger,
+	// 	IsFlooded:  req.IsFlooded,
+	// 	MeasuredAt: req.MeasuredAt,
+	// 	Note:       req.Note,
+	// }); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
 
-func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) (*entities.WaterLevel, error) {
+func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) ([]*entities.WaterLevel, error) {
 
 	fileName := utils.GenerateFileName()
 
-	// if err := utils.CaptureWaterImage(s.cfg.App.ImageProcessingDir, fileName); err != nil {
+	_ = fileName
+
+	// apiResponses := map[int]models.ThaiWaterAPIResponse{}
+	apiResponses := make([]models.ThaiWaterAPIResponse, 0)
+
+	provienceSet := []string{"13"}
+
+	for _, v := range provienceSet {
+		apiResponse := models.ThaiWaterAPIResponse{}
+		if err := utils.Get("https://api-v3.thaiwater.net/api/v1/thaiwater30/provinces/waterlevel?province_code="+v, &apiResponse); err != nil {
+			return nil, err
+		}
+		apiResponses = append(apiResponses, apiResponse)
+	}
+
+	// locations := make([]*entities.Location, 0)
+	// for _, v := range apiResponses[0].Data {
+	// 	locations = append(locations, &entities.Location{
+	// 		StationID:   int64(v.Station.ID),
+	// 		Name:        v.Station.TeleStationName.TH,
+	// 		Description: v.Station.TeleStationName.TH,
+	// 		ProvinceID: func(a any) int {
+	// 			provinceCode, _ := strconv.Atoi(v.Geocode.ProvinceCode)
+	// 			return provinceCode
+	// 		}(v.Geocode.ProvinceCode),
+	// 		Latitude:  v.Station.TeleStationLat,
+	// 		Longitude: v.Station.TeleStationLong,
+	// 		IsActive:  true,
+	// 		BankLevel: v.Station.MinBank,
+	// 	})
+	// }
+
+	// if err := s.repo.CreateStationLocation(ctx, locations); err != nil {
 	// 	return nil, err
 	// }
 
-	apiResponse := new(models.ThaiWaterAPIResponse)
-
-	if err := utils.Get("https://api-v3.thaiwater.net/api/v1/thaiwater30/provinces/waterlevel?province_code=13", apiResponse); err != nil {
-		return nil, err
+	if apiResponses[0].Result != "OK" {
+		return nil, fmt.Errorf("API returned non-OK result: %s", apiResponses[0].Result)
 	}
 
-	if apiResponse.Result != "OK" {
-		return nil, fmt.Errorf("API returned non-OK result: %s", apiResponse.Result)
+	waterLevels := make([]*entities.WaterLevel, 0)
+
+	for _, values := range apiResponses {
+		for _, value := range values.Data {
+			waterLevels = append(waterLevels, &entities.WaterLevel{
+				StationID: int64(value.Station.ID),
+				LevelCm:   utils.ConvertStringToFloat64(value.WaterlevelMSL),
+				Image:     "",
+				Danger: func() string {
+					if utils.ConvertStringToFloat64(value.WaterlevelMSL) < value.Station.MinBank-0.2 {
+						return "SAFE"
+					} else if utils.ConvertStringToFloat64(value.WaterlevelMSL) < value.Station.MinBank {
+						return "WATCH"
+					} else {
+						return "DANGER"
+					}
+				}(),
+				IsFlooded: func() bool {
+					if utils.ConvertStringToFloat64(value.WaterlevelMSL) < value.Station.MinBank {
+						return false
+					} else {
+						return true
+					}
+				}(),
+				Source:     sql.NullString{String: value.Station.TeleStationName.TH, Valid: true},
+				MeasuredAt: utils.ConvertStringToTime(value.WaterlevelDatetime),
+				Note:       "get value of waterLevel from cctv of water",
+			})
+		}
+
 	}
 
-	stationName := apiResponse.Data[0].Station.TeleStationName.TH
-
-	entity := &entities.WaterLevel{
-		LocationID: 28,
-		LevelCm:    utils.ConvertStringToFloat64(apiResponse.Data[0].WaterlevelMSL) * 100,
-		// Image:      fileName,
-		Image: "",
-		Danger: func() string {
-			if utils.ConvertStringToFloat64(apiResponse.Data[0].WaterlevelMSL) < 1 {
-				return "SAFE"
-			} else if utils.ConvertStringToFloat64(apiResponse.Data[0].WaterlevelMSL) < 1.29 {
-				return "WATCH"
-			} else {
-				return "DANGER"
-			}
-		}(),
-		IsFlooded: func() bool {
-			if utils.ConvertStringToFloat64(apiResponse.Data[0].WaterlevelMSL) < 1.29 {
-				return false
-			} else {
-				return true
-			}
-		}(),
-		Source:     sql.NullString{String: stationName, Valid: true},
-		MeasuredAt: utils.ConvertStringToTime(apiResponse.Data[0].WaterlevelDatetime),
-		Note:       "get value of waterLevel from cctv of water",
-	}
-
-	if err := s.repo.CreateWaterLevel(ctx, entity); err != nil {
+	if err := s.repo.CreateWaterLevel(ctx, waterLevels); err != nil {
 		log.Println("failed to create water level in database:", err)
 		filePath := s.cfg.App.UploadDir + "/images/" + fileName
 		if deleteErr := utils.DeleteFile(filePath); deleteErr != nil {
@@ -184,7 +226,7 @@ func (s *waterLevelService) ScheduleGetWaterLevel(ctx context.Context) (*entitie
 		return nil, err
 	}
 
-	return entity, nil
+	return waterLevels, nil
 }
 
 func (s *waterLevelService) ScheduleDeleteWaterLevel(ctx context.Context, fileName string, locationID int) error {

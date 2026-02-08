@@ -26,7 +26,8 @@ export interface MapMarkerResponse {
 // }
 
 export interface MarkersWithLocation {
-    location_id: string,
+    station_id: string,
+    province_id: number,
     location_name: string,
     location_description: string,
     latitude: number,

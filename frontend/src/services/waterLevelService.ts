@@ -9,7 +9,7 @@ export const getMapMarkersService = async (): Promise<MapMarkerResponse | null> 
     return response.data;
 };
 
-export const getMapMarkerDetailService = async(locationId:number): Promise<WaterDetailResponse | null> => {
-    const response = await axios.get(`${API_BASE_URL}/markers/detail?location_id=${locationId}`)
+export const getMapMarkerDetailService = async(stationId: string): Promise<WaterDetailResponse | null> => {
+    const response = await axios.get(`${API_BASE_URL}/markers/detail?station_id=${stationId}`)
     return response.data;
 }

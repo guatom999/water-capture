@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/guatom999/self-boardcast/internal/config"
 	"github.com/jmoiron/sqlx"
@@ -22,10 +23,12 @@ func DatabaseConnect(cfg *config.Config) *sqlx.DB {
 
 	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
+		log.Printf("Error connecting to database: %v", err)
 		panic(err)
 	}
 
 	if err := db.Ping(); err != nil {
+		log.Printf("Error pinging database: %v", err)
 		panic(err)
 	}
 

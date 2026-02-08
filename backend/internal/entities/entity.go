@@ -5,10 +5,21 @@ import (
 	"time"
 )
 
+type Province struct {
+	ID        int       `db:"id" json:"id"`
+	Name      string    `db:"name" json:"name"`
+	Code      string    `db:"code" json:"code"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
 type Location struct {
 	ID          int64     `db:"id" json:"id"`
+	StationID   int64     `db:"station_id" json:"station_id"`
 	Name        string    `db:"name" json:"name"`
 	Description string    `db:"description" json:"description"`
+	ProvinceID  int       `db:"province_id" json:"province_id"`
+	BankLevel   float64   `db:"bank_level" json:"bank_level"`
 	Latitude    float64   `db:"latitude" json:"latitude"`
 	Longitude   float64   `db:"longitude" json:"longitude"`
 	IsActive    bool      `db:"is_active" json:"is_active"`
@@ -18,7 +29,7 @@ type Location struct {
 
 type WaterLevel struct {
 	ID                int64          `db:"id" json:"id"`
-	LocationID        int64          `db:"location_id" json:"location_id"`
+	StationID         int64          `db:"station_id" json:"station_id"`
 	LevelCm           float64        `db:"level_cm" json:"level_cm"`
 	Image             string         `db:"image" json:"image"`
 	Danger            string         `db:"danger" json:"danger"`

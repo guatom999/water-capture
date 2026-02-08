@@ -43,10 +43,10 @@ type (
 )
 
 func LoadConfig(path string) *Config {
-
+	// Try to load .env file, but don't fail if not found
+	// (Docker Compose provides environment variables directly)
 	if err := godotenv.Load(path); err != nil {
-		log.Fatalf("Error loading env file %s", err.Error())
-		return nil
+		log.Printf("Note: .env file not found at %s, using environment variables", path)
 	}
 
 	return &Config{

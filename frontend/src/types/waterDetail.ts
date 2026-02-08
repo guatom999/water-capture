@@ -1,7 +1,6 @@
 export interface LocationDetail {
-    location_id: number;
     level_cm: number | null;
-    image: string ;
+    image: string;
     danger: string | null;
     is_flooded: boolean | null;
     source: {
@@ -12,8 +11,14 @@ export interface LocationDetail {
     note: string | null;
 }
 
+export interface WaterLocationDetail {
+    station_id: number;
+    bank_level: number;
+    detail: LocationDetail[];
+}
+
 export interface WaterDetailResponse {
-    markers: LocationDetail[];
+    markers: WaterLocationDetail;
 }
 
 
