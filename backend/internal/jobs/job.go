@@ -36,7 +36,7 @@ func (c *WaterJob) ScheduleGetWaterLevel(ctx context.Context) {
 	var locationID int
 
 	c.cron.AddFunc("0 */20 * * * *", func() {
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 20)
 		waterLevels, err := c.service.ScheduleGetWaterLevel(ctx)
 		if err != nil {
 			log.Println("failed to schedule get water level", err)
