@@ -26,9 +26,10 @@ type WaterLevelServiceInterface interface {
 	// ProcessImage(ctx context.Context, imageURL string) (*models.WaterLevel, error)
 	GetAllLocations(ctx context.Context, limit int) ([]models.LocationWithWaterLevelRes, error)
 	GetByLocationID(ctx context.Context, id string) (*models.WaterLocationDetailRes, error)
-	ScheduleGetWaterLevel(ctx context.Context) ([]*entities.WaterLevel, error)
 	CreateWaterLevel(ctx context.Context, req *models.CreateWaterLevelReq) error
+	CreateStationLocation(ctx context.Context, provinceCode string) error
 
+	ScheduleGetWaterLevel(ctx context.Context) ([]*entities.WaterLevel, error)
 	ScheduleDeleteWaterLevel(ctx context.Context, fileName string, locationID int) error
 }
 
@@ -38,6 +39,43 @@ func NewWaterLevelService(repo repositories.WaterLevelRepositoryInterface, baseU
 		baseURL: baseURL,
 		cfg:     cfg,
 	}
+}
+
+func (s *waterLevelService) CreateStationLocation(ctx context.Context, provinceCode string) error {
+	apiResponses := make([]models.ThaiWaterAPIResponse, 0)
+
+	// provienceSet := []string{"13"}
+
+	// for _, v := range provienceSet {
+	apiResponse := models.ThaiWaterAPIResponse{}
+	if err := utils.Get("https://api-v3.thaiwater.net/api/v1/thaiwater30/provinces/waterlevel?province_code="+provinceCode, &apiResponse); err != nil {
+		return err
+	}
+	apiResponses = append(apiResponses, apiResponse)
+	// }
+
+	locations := make([]*entities.Location, 0)
+	for _, v := range apiResponses[0].Data {
+		locations = append(locations, &entities.Location{
+			StationID:   int64(v.Station.ID),
+			Name:        v.Station.TeleStationName.TH,
+			Description: v.Station.TeleStationName.TH,
+			ProvinceID: func(a any) int {
+				provinceCode, _ := strconv.Atoi(v.Geocode.ProvinceCode)
+				return provinceCode
+			}(v.Geocode.ProvinceCode),
+			Latitude:  v.Station.TeleStationLat,
+			Longitude: v.Station.TeleStationLong,
+			IsActive:  true,
+			BankLevel: v.Station.MinBank,
+		})
+	}
+
+	if err := s.repo.CreateStationLocation(ctx, locations); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *waterLevelService) GetAllLocations(ctx context.Context, limit int) ([]models.LocationWithWaterLevelRes, error) {

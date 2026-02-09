@@ -21,9 +21,9 @@ type WaterLevelRepositoryInterface interface {
 	GetAll(ctx context.Context, limit int) ([]models.LocationWithWaterLevel, error)
 	GetLocationByID(ctx context.Context, stationID int) (*entities.Location, error)
 	GetWaterLevelByID(ctx context.Context, locationID int) ([]*entities.WaterLevel, error)
-	CreateWaterLevel(ctx context.Context, req []*entities.WaterLevel) error
 	CreateProvince(ctx context.Context, req []*entities.Province) error
 	CreateStationLocation(ctx context.Context, req []*entities.Location) error
+	CreateWaterLevel(ctx context.Context, req []*entities.WaterLevel) error
 	// DeleteOldestWaterLevels(ctx context.Context, locationID int, keepLatest int) error
 
 	MarkForDeletion(ctx context.Context, id int64, scheduledAt time.Time) error

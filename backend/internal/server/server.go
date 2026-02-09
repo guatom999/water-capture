@@ -58,6 +58,8 @@ func (s *Server) WaterModules() {
 		return c.JSON(http.StatusOK, "OK")
 	})
 
+	s.echo.POST("/add_station_location", handler.AddStationLocation)
+
 	s.echo.GET("/markers", handler.GetMapMarkers)
 	s.echo.GET("/markers/detail", handler.GetSectionDetail)
 
