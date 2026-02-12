@@ -103,3 +103,8 @@ debug
 
 public/
 uploads/
+
+*.exe
+*.out
+*.html
+.env
