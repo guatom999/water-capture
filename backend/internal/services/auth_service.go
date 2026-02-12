@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -28,18 +29,46 @@ type AuthServiceInterface interface {
 	RefreshToken(ctx context.Context, refreshToken string) (*models.AuthResponse, error)
 	Logout(ctx context.Context, refreshToken string) error
 	ValidateAccessToken(tokenString string) (*models.TokenClaims, error)
+	GetUserProfile(ctx context.Context, userID int64) (*models.UserResponse, error)
 }
 
 type authService struct {
-	repo repositories.AuthRepositoryInterface
-	cfg  *config.Config
+	notiRepo repositories.NotificationRepositoryInterface
+	repo     repositories.AuthRepositoryInterface
+	cfg      *config.Config
 }
 
-func NewAuthService(repo repositories.AuthRepositoryInterface, cfg *config.Config) AuthServiceInterface {
+func NewAuthService(notiRepo repositories.NotificationRepositoryInterface, repo repositories.AuthRepositoryInterface, cfg *config.Config) AuthServiceInterface {
 	return &authService{
-		repo: repo,
-		cfg:  cfg,
+		notiRepo: notiRepo,
+		repo:     repo,
+		cfg:      cfg,
 	}
+}
+
+func (s *authService) GetUserProfile(ctx context.Context, userID int64) (*models.UserResponse, error) {
+
+	user, err := s.repo.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Printf("Error: Failed to Get User Profile: %v", err)
+		return nil, err
+	}
+
+	userSubscriptionInfo, err := s.notiRepo.GetUserSubscriptions(ctx, userID)
+	if err != nil {
+		log.Printf("Error: Failed to Get User Subscription Info: %v", err)
+		return nil, err
+	}
+
+	return &models.UserResponse{
+		ID:                  user.ID,
+		Email:               user.Email,
+		Name:                user.Name,
+		Role:                user.Role,
+		SubscribedChannel:   userSubscriptionInfo.Channel,
+		SubscribeProvinceID: userSubscriptionInfo.ProvinceID,
+		SubscribeLocationID: userSubscriptionInfo.LocationID,
+	}, nil
 }
 
 func (s *authService) Register(ctx context.Context, req *models.RegisterRequest) (*models.AuthResponse, error) {

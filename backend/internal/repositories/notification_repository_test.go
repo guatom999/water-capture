@@ -35,10 +35,10 @@ func TestNotification_GetSubscriptionsByLocationID_Success(t *testing.T) {
 	result, err := repo.GetSubscriptionsByLocationID(context.Background(), 5)
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
-	if result[0].UserID != nil {
-		assert.Equal(t, 10, *result[0].UserID)
+	if result[0].UserID != 0 {
+		assert.Equal(t, 10, result[0].UserID)
 	} else {
-		t.Fatalf("expected UserID to be non-nil")
+		t.Fatalf("expected UserID to be non-zero")
 	}
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
@@ -64,7 +64,7 @@ func TestNotification_CreateSubscription_Success(t *testing.T) {
 
 	repo := NewNotificationRepository(sqlxDB)
 	one := 1
-	sub := &entities.NotificationSubscription{UserID: &one, LocationID: nil, Channel: "line", Target: "@user", ThresholdLevel: 2.5, IsActive: true}
+	sub := &entities.NotificationSubscription{UserID: int64(one), LocationID: 0, Channel: "line", ProvinceID: 13, IsActive: true}
 	err := repo.CreateSubscription(context.Background(), sub)
 	assert.NoError(t, err)
 	assert.Equal(t, 7, sub.ID)
@@ -79,7 +79,7 @@ func TestNotification_LogNotification_Success(t *testing.T) {
 
 	repo := NewNotificationRepository(sqlxDB)
 	oneInt := 1
-	lg := &entities.NotificationLog{SubscriptionID: &oneInt, LocationID: 5, WaterLevel: 1.5, Message: "msg", Channel: "line", Status: "SENT", ErrorMessage: nil}
+	lg := &entities.NotificationLog{SubscriptionID: int64(oneInt), LocationID: 5, WaterLevel: 1.5, Message: "msg", Channel: "line", Status: "SENT", ErrorMessage: nil}
 	err := repo.LogNotification(context.Background(), lg)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, lg.ID)

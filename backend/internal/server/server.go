@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/guatom999/self-boardcast/internal/config"
 	"github.com/guatom999/self-boardcast/internal/handlers"
 	"github.com/guatom999/self-boardcast/internal/repositories"
@@ -17,13 +18,23 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+
+	customMiddleware "github.com/guatom999/self-boardcast/internal/middleware"
 )
 
+type customValidator struct {
+	validator *validator.Validate
+}
+
+func (cv *customValidator) Validate(i interface{}) error {
+	return cv.validator.Struct(i)
+}
+
 type Server struct {
-	db          *sqlx.DB
-	echo        *echo.Echo
-	cfg         *config.Config
-	authService services.AuthServiceInterface
+	db   *sqlx.DB
+	echo *echo.Echo
+	cfg  *config.Config
+	// authService services.AuthServiceInterface
 }
 
 func NewServer(db *sqlx.DB, cfg *config.Config) *Server {
@@ -32,17 +43,14 @@ func NewServer(db *sqlx.DB, cfg *config.Config) *Server {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
+
+	e.Validator = &customValidator{validator: validator.New()}
 	// e.Use(middleware.SecurityHeaders())
 
-	// Initialize auth service for use across modules
-	authRepo := repositories.NewAuthRepository(db)
-	authService := services.NewAuthService(authRepo, cfg)
-
 	return &Server{
-		db:          db,
-		echo:        e,
-		cfg:         cfg,
-		authService: authService,
+		db:   db,
+		echo: e,
+		cfg:  cfg,
 	}
 }
 
@@ -80,8 +88,23 @@ func (s *Server) ImageModules() {
 	s.echo.GET("/images/health", imageHandler.HealthCheck)
 }
 
+func (s *Server) NotificaitonModules() {
+	notificationRepo := repositories.NewNotificationRepository(s.db)
+	authRepo := repositories.NewAuthRepository(s.db)
+	notificationService := services.NewNotificationService(authRepo, notificationRepo)
+	notificationHandler := handlers.NewNotificationHandler(notificationService)
+
+	noti := s.echo.Group("/notification")
+
+	noti.POST("/subscribe", notificationHandler.CreateSubscription)
+}
+
 func (s *Server) AuthModules() {
-	authHandler := handlers.NewAuthHandler(s.authService)
+
+	authRepo := repositories.NewAuthRepository(s.db)
+	notiRepo := repositories.NewNotificationRepository(s.db)
+	authService := services.NewAuthService(notiRepo, authRepo, s.cfg)
+	authHandler := handlers.NewAuthHandler(authService)
 
 	auth := s.echo.Group("/auth")
 	auth.POST("/register", authHandler.Register)
@@ -90,7 +113,7 @@ func (s *Server) AuthModules() {
 	auth.POST("/logout", authHandler.Logout)
 
 	// Protected route example - requires valid access token
-	// auth.GET("/me", authHandler.GetMe, customMiddleware.JWTMiddleware(s.authService))
+	auth.GET("/me", authHandler.GetMe, customMiddleware.JWTMiddleware(authService))
 }
 
 func (s *Server) Start() error {
@@ -103,6 +126,7 @@ func (s *Server) Start() error {
 	s.AuthModules()
 	s.WaterModules()
 	s.ImageModules()
+	s.NotificaitonModules()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)

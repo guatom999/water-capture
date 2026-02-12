@@ -67,7 +67,7 @@ func (h *ImageHandler) HealthCheck(c echo.Context) error {
 	if _, err := os.Stat(h.cfg.App.UploadDir); os.IsNotExist(err) {
 		return c.JSON(http.StatusServiceUnavailable, map[string]string{
 			"status":  "unhealthy",
-			"message": fmt.Sprint("Upload directory not found"),
+			"message": "Upload directory not found",
 		})
 	}
 

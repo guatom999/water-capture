@@ -161,16 +161,20 @@ func (h *authHandler) Logout(c echo.Context) error {
 // @Router /auth/me [get]
 func (h *authHandler) GetMe(c echo.Context) error {
 	// Get claims from context (set by auth middleware)
+
+	ctx := c.Request().Context()
+
 	claims, ok := c.Get("user").(*models.TokenClaims)
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 	}
 
-	return c.JSON(http.StatusOK, models.UserResponse{
-		ID:    claims.UserID,
-		Email: claims.Email,
-		Role:  claims.Role,
-	})
+	userProfile, err := h.authService.GetUserProfile(ctx, claims.UserID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get user profile"})
+	}
+
+	return c.JSON(http.StatusOK, userProfile)
 }
 
 // Helper function to extract token from Authorization header

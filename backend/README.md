@@ -1,150 +1,183 @@
-# Self Boardcast Backend API
+# 🌊 Water Level Monitor — Backend
 
-## โครงสร้าง Hexagonal Architecture
+Backend system for real-time water level monitoring, built with Go (Echo framework). Split into 3 services: **API**, **Cron**, and **Worker**.
+
+## Architecture
+
+Uses **Layered Architecture** with interface-based Dependency Injection at every layer.
 
 ```
 backend/
 ├── cmd/
-│   └── api/
-│       └── main.go                 # Entry point สำหรับ API server
+│   ├── api/          # HTTP API server (Echo)
+│   ├── cron/         # Scheduled jobs (robfig/cron)
+│   └── worker/       # Async task worker (asynq + Redis)
 ├── internal/
-│   ├── core/                       # Core Business Logic Layer
-│   │   ├── domain/                 # Domain entities
-│   │   │   └── water_level.go
-│   │   ├── ports/                  # Interfaces (Ports)
-│   │   │   ├── input/              # Input ports (use cases)
-│   │   │   │   └── water_level_service.go
-│   │   │   └── output/             # Output ports (repositories)
-│   │   │       └── water_level_repository.go
-│   │   └── services/               # Business logic implementation
-│   │       └── water_level_service.go
-│   └── adapters/                   # Adapters Layer
-│       ├── input/                  # Input adapters
-│       │   └── http/               # HTTP handlers
-│       │       ├── handler.go
-│       │       └── router.go
-│       └── output/                 # Output adapters
-│           └── persistence/        # Database/storage implementations
-│               └── water_level_repository.go
-├── pkg/                            # Public packages
-│   └── config/
-│       └── config.go
-├── go.mod
-├── go.sum
-└── main.go                         # Alternative entry point
+│   ├── config/       # App configuration (.env)
+│   ├── database/     # Database connection + migrations
+│   │   └── migrate/  # SQL migration scripts
+│   ├── entities/     # Domain entities (Province, Location, WaterLevel)
+│   ├── models/       # Request/Response DTOs
+│   ├── handlers/     # HTTP handlers (controller layer)
+│   ├── services/     # Business logic layer
+│   ├── repositories/ # Data access layer (sqlx + PostgreSQL)
+│   ├── middleware/    # Auth & security middleware
+│   ├── jobs/         # Cron job definitions
+│   ├── tasks/        # Asynq task types & handlers
+│   ├── notifiers/    # Notification channels (LINE, Webhook)
+│   └── utils/        # Shared utility functions
+├── Dockerfile        # Multi-stage build (api/cron/worker)
+├── docker-compose.yml
+└── go.mod
 ```
 
-## การติดตั้ง
+### Dependency Flow
 
-```bash
-cd backend
-go mod tidy
+```
+Handlers → Services → Repositories → PostgreSQL
+                ↘ Tasks → Redis Queue → Worker → Notifiers (LINE)
 ```
 
-## การรัน
+## Tech Stack
 
-### วิธีที่ 1: รันจาก cmd/api
-
-```bash
-go run cmd/api/main.go
-```
-
-### วิธีที่ 2: รันจาก main.go
-
-```bash
-go run main.go
-```
-
-### วิธีที่ 3: Build และรัน
-
-```bash
-go build -o server cmd/api/main.go
-./server
-```
+| Technology | Usage |
+|---|---|
+| **Go 1.24** | Core language |
+| **Echo v4** | HTTP framework |
+| **sqlx + lib/pq** | PostgreSQL driver & query builder |
+| **golang-jwt/jwt** | JWT authentication |
+| **asynq + Redis** | Async task queue (notifications) |
+| **robfig/cron** | Scheduled job runner |
+| **testify + sqlmock** | Unit testing |
 
 ## API Endpoints
 
 ### Health Check
 
-```bash
-GET http://localhost:8080/health
+```
+GET /heath
 ```
 
-### Get Latest Water Level
+### Water Level
 
-```bash
-GET http://localhost:8080/api/v1/water-levels/latest
+```
+GET  /markers                              # Get all stations with latest water level
+GET  /markers/detail?station_id={id}       # Get detailed water level data for a station
+POST /add_station_location                 # Add new station from external API
 ```
 
-### Get Water Level History
+### Authentication
 
-```bash
-GET http://localhost:8080/api/v1/water-levels/history?limit=10
+```
+POST /auth/register    # Register new user
+POST /auth/login       # Login (returns access + refresh token)
+POST /auth/refresh     # Refresh access token
+POST /auth/logout      # Logout (revoke refresh token)
 ```
 
-### Process Image
+### Image Serving
 
-```bash
-POST http://localhost:8080/api/v1/water-levels/process
-Content-Type: application/json
-
-{
-  "image_url": "http://example.com/image.png"
-}
+```
+GET /images/:filename    # Serve water level images
+GET /images/health       # Image service health check
 ```
 
-## ทดสอบ API
+## Services
+
+### 1. API Server (`cmd/api`)
+
+Main HTTP server serving the REST API.
 
 ```bash
-# Health check
-curl http://localhost:8080/health
-
-# Get latest water level
-curl http://localhost:8080/api/v1/water-levels/latest
-
-# Get history
-curl http://localhost:8080/api/v1/water-levels/history?limit=5
-
-# Process image
-curl -X POST http://localhost:8080/api/v1/water-levels/process \
-  -H "Content-Type: application/json" \
-  -d '{"image_url": "http://example.com/water.jpg"}'
+cd cmd/api && go run main.go
 ```
 
-## Hexagonal Architecture Layers
+### 2. Cron Service (`cmd/cron`)
 
-### 1. Core Domain Layer
+Fetches water level data from external APIs every 20 minutes. Enqueues LINE alerts when levels reach DANGER/WATCH status.
 
-- **Domain entities**: โมเดลหลักของ business (WaterLevel)
-- **Pure business logic**: ไม่มี dependencies กับ framework หรือ infrastructure
+```bash
+cd cmd/cron && go run main.go
+```
 
-### 2. Ports Layer
+### 3. Worker Service (`cmd/worker`)
 
-- **Input Ports**: Interfaces ที่กำหนด use cases (WaterLevelService)
-- **Output Ports**: Interfaces สำหรับ external dependencies (WaterLevelRepository)
+Consumes tasks from Redis queue (asynq) and sends notifications via LINE Messaging API.
 
-### 3. Services Layer
+```bash
+cd cmd/worker && go run main.go
+```
 
-- **Business logic implementation**: Implement input ports
-- **Use output ports**: เรียกใช้ repositories ผ่าน interfaces
+## Setup & Running
 
-### 4. Adapters Layer
+### Prerequisites
 
-- **Input Adapters**: HTTP handlers, CLI, gRPC, etc.
-- **Output Adapters**: Database, external APIs, file system, etc.
+- Go 1.24+
+- PostgreSQL 16+
+- Redis 7+
 
-## ข้อดีของ Hexagonal Architecture
+### Option 1: Docker Compose (Recommended)
 
-✅ **Testability**: ง่ายต่อการ mock interfaces และเขียน unit tests
-✅ **Flexibility**: เปลี่ยน database หรือ framework ได้ง่าย
-✅ **Maintainability**: แยก business logic ออกจาก infrastructure
-✅ **Scalability**: เพิ่ม adapters ใหม่ได้โดยไม่กระทบ core logic
-✅ **Clean Dependencies**: Dependencies ชี้เข้าหา core เสมอ
+```bash
+docker compose up -d
+```
 
-## ขั้นตอนต่อไป
+This starts all services: PostgreSQL, Redis, API, Cron, and Worker.
 
-1. เพิ่ม PostgreSQL adapter แทน in-memory repository
-2. เพิ่ม HTTP client เพื่อเรียก Python service
-3. เพิ่ม logging และ monitoring
-4. เพิ่ม authentication และ authorization
-5. เขียน unit tests และ integration tests
+### Option 2: Local Development
+
+1. Create `.env` from `.env.example`
+
+2. Start Database & Redis
+
+```bash
+docker compose -f docker-compose-db.yaml up -d
+```
+
+3. Run migrations
+
+```bash
+psql -h localhost -p 5503 -U postgres -d self_boardcast-db -f internal/database/migrate/migrate.sql
+psql -h localhost -p 5503 -U postgres -d self_boardcast-db -f internal/database/migrate/auth.sql
+```
+
+4. Start services (each in a separate terminal)
+
+```bash
+cd cmd/api && go run main.go
+cd cmd/cron && go run main.go
+cd cmd/worker && go run main.go
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `APP_PORT` | API server port | `8080` |
+| `DB_HOST` | PostgreSQL host | - |
+| `DB_PORT` | PostgreSQL port | - |
+| `DB_USERNAME` | PostgreSQL username | - |
+| `DB_PASSWORD` | PostgreSQL password | - |
+| `DB_NAME` | Database name | - |
+| `DB_SSLMODE` | SSL mode | - |
+| `JWT_SECRET` | JWT signing secret | - |
+| `ACCESS_TOKEN_EXPIRY` | Access token expiry (minutes) | `15` |
+| `REFRESH_TOKEN_EXPIRY` | Refresh token expiry (days) | `1` |
+| `UPLOAD_DIR` | Image upload directory | - |
+| `IMAGE_PROCESSING_DIR` | Image processing directory | - |
+| `REDIS_ADDR` | Redis address | `localhost:6379` |
+| `LINE_CHANNEL_ACCESS_TOKEN` | LINE Messaging API token | - |
+
+## Testing
+
+```bash
+# Run all tests
+go test ./...
+
+# Run with coverage
+go test ./internal/repositories/ ./internal/services/ -cover
+
+# Generate coverage report
+go test ./... -coverprofile=coverage.out
+go tool cover -html=coverage.out -o coverage.html
+```

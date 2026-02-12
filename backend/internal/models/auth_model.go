@@ -32,10 +32,13 @@ type AuthResponse struct {
 }
 
 type UserResponse struct {
-	ID    int64  `json:"id"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
-	Role  string `json:"role"`
+	ID                  int64  `json:"id"`
+	Email               string `json:"email"`
+	Name                string `json:"name"`
+	Role                string `json:"role"`
+	SubscribedChannel   string `json:"subscribed_channel,omitempty"`
+	SubscribeProvinceID int64  `json:"subscribe_province_id,omitempty"`
+	SubscribeLocationID int64  `json:"subscribe_location_id,omitempty"`
 }
 
 // JWT Claims

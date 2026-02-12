@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"time"
 
 	"github.com/guatom999/self-boardcast/internal/entities"
 	"github.com/jmoiron/sqlx"
@@ -13,10 +14,13 @@ type (
 	}
 
 	NotificationRepositoryInterface interface {
+		GetUserSubscriptions(ctx context.Context, userID int64) (*entities.NotificationSubscription, error)
 		GetSubscriptionsByLocationID(ctx context.Context, locationID int) ([]entities.NotificationSubscription, error)
 		GetActiveSubscriptions(ctx context.Context) ([]entities.NotificationSubscription, error)
 		CreateSubscription(ctx context.Context, sub *entities.NotificationSubscription) error
 		LogNotification(ctx context.Context, log *entities.NotificationLog) error
+		// IsSubscriptionExist(ctx context.Context, userID int64, locationID int) (bool, error)
+		IsUserAlreaySubscript(ctx context.Context, userID int64) bool
 	}
 )
 
@@ -26,12 +30,32 @@ func NewNotificationRepository(db *sqlx.DB) NotificationRepositoryInterface {
 	}
 }
 
+func (r *notificationRepository) GetUserSubscriptions(ctx context.Context, userID int64) (*entities.NotificationSubscription, error) {
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*15)
+	defer cancel()
+
+	result := entities.NotificationSubscription{}
+
+	query := `
+		SELECT id, user_id, location_id, channel, province_id, is_active, created_at, updated_at
+		FROM notification_subscriptions
+		WHERE user_id = $1
+	`
+
+	if err := r.db.GetContext(ctx, &result, query, userID); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 // GetSubscriptionsByLocationID ดึง subscriptions ตาม location_id
 func (r *notificationRepository) GetSubscriptionsByLocationID(ctx context.Context, locationID int) ([]entities.NotificationSubscription, error) {
 	var subscriptions []entities.NotificationSubscription
 
 	query := `
-		SELECT id, user_id, location_id, channel, target, threshold_level, is_active, created_at, updated_at
+		SELECT id, user_id, location_id, channel, province_id, is_active, created_at, updated_at
 		FROM notification_subscriptions
 		WHERE (location_id = $1 OR location_id IS NULL)
 		AND is_active = true
@@ -49,7 +73,7 @@ func (r *notificationRepository) GetActiveSubscriptions(ctx context.Context) ([]
 	var subscriptions []entities.NotificationSubscription
 
 	query := `
-		SELECT id, user_id, location_id, channel, target, threshold_level, is_active, created_at, updated_at
+		SELECT id, user_id, location_id, channel, province_id, is_active, created_at, updated_at
 		FROM notification_subscriptions
 		WHERE is_active = true
 	`
@@ -61,11 +85,14 @@ func (r *notificationRepository) GetActiveSubscriptions(ctx context.Context) ([]
 	return subscriptions, nil
 }
 
-// CreateSubscription สร้าง subscription ใหม่
 func (r *notificationRepository) CreateSubscription(ctx context.Context, sub *entities.NotificationSubscription) error {
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
 	query := `
-		INSERT INTO notification_subscriptions (user_id, location_id, channel, target, threshold_level, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO notification_subscriptions (user_id, location_id, channel, province_id, is_active)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id
 	`
 
@@ -73,8 +100,7 @@ func (r *notificationRepository) CreateSubscription(ctx context.Context, sub *en
 		sub.UserID,
 		sub.LocationID,
 		sub.Channel,
-		sub.Target,
-		sub.ThresholdLevel,
+		sub.ProvinceID,
 		sub.IsActive,
 	).Scan(&sub.ID)
 }
@@ -96,4 +122,17 @@ func (r *notificationRepository) LogNotification(ctx context.Context, log *entit
 		log.Status,
 		log.ErrorMessage,
 	).Scan(&log.ID)
+}
+
+func (r *notificationRepository) IsUserAlreaySubscript(ctx context.Context, userID int64) bool {
+	var count int
+	query := `
+		SELECT COUNT(*)
+		FROM notification_subscriptions
+		WHERE user_id = $1
+	`
+	if err := r.db.GetContext(ctx, &count, query, userID); err != nil {
+		return false
+	}
+	return count > 0
 }
