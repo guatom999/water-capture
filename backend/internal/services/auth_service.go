@@ -61,13 +61,15 @@ func (s *authService) GetUserProfile(ctx context.Context, userID int64) (*models
 	}
 
 	return &models.UserResponse{
-		ID:                  user.ID,
-		Email:               user.Email,
-		Name:                user.Name,
-		Role:                user.Role,
-		SubscribedChannel:   userSubscriptionInfo.Channel,
-		SubscribeProvinceID: userSubscriptionInfo.ProvinceID,
-		SubscribeLocationID: userSubscriptionInfo.LocationID,
+		ID:    user.ID,
+		Email: user.Email,
+		Name:  user.Name,
+		Role:  user.Role,
+		Subscribe: models.Subscribe{
+			SubscribedChannel:   userSubscriptionInfo.Channel,
+			SubscribeProvinceID: userSubscriptionInfo.ProvinceID,
+			SubscribeLocationID: userSubscriptionInfo.LocationID,
+		},
 	}, nil
 }
 
