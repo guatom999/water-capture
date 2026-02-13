@@ -1,17 +1,22 @@
 import { useEffect, useState, useMemo } from "react"
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, Brush } from 'recharts';
 import Footer from "./Footer";
 import { getMapMarkerDetailService } from "../services/waterLevelService";
+import { useAuthStore } from "../stores/authStore";
 import type { LocationDetail, WaterDetailResponse } from "../types/waterDetail";
+import Header from "./Header";
 
 const SectionDetail = () => {
     const [searchParams] = useSearchParams();
     const stationId = searchParams.get('station_id');
+    const navigate = useNavigate();
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
     const [sectionDetail, setSectionDetail] = useState<WaterDetailResponse | null>(null);
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-    const [dateRange, setDateRange] = useState<'all' | '1day' | '7days' | '30days'>('1day');
+    const [dateRange, setDateRange] = useState<'all' | '1day' | '3days' | '7days' | '30days'>('1day');
+    const [showImagePopup, setShowImagePopup] = useState(false);
 
     const getSectionDetail = async () => {
         if (stationId) {
@@ -41,6 +46,9 @@ const SectionDetail = () => {
                 case '1day':
                     const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
                     return markerDate >= oneDayAgo;
+                case '3days':
+                    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+                    return markerDate >= threeDaysAgo;
                 case '7days':
                     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                     return markerDate >= sevenDaysAgo;
@@ -166,15 +174,15 @@ const SectionDetail = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
             {/* Header */}
-            <div className="bg-blue-600 text-white py-8 shadow-lg">
+            <Header />
+            {/* <div className="bg-blue-600 text-white py-6 shadow-lg">
                 <Link to="/">
-                    <div className="container mx-auto px-4">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <h1 className="text-3xl font-bold mb-2">Water Level Details</h1>
-                        <p className="text-blue-100">Station ID: {stationId}</p>
                     </div>
                 </Link>
 
-            </div>
+            </div> */}
 
             {sectionDetail ? (
                 <div className="container mx-auto px-4 py-8">
@@ -193,6 +201,7 @@ const SectionDetail = () => {
                                         {[
                                             { key: 'all', label: 'ทั้งหมด' },
                                             { key: '1day', label: '24 ชม.' },
+                                            { key: '3days', label: '3 วัน' },
                                             { key: '7days', label: '7 วัน' },
                                             { key: '30days', label: '30 วัน' }
                                         ].map(option => (
@@ -235,7 +244,37 @@ const SectionDetail = () => {
 
                             {/* Water Level Chart */}
                             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-                                <h3 className="text-lg font-semibold text-gray-800 mb-4">Water Level Over Time</h3>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-semibold text-gray-800">Water Level Over Time</h3>
+                                    <button
+                                        onClick={() => {
+                                            if (!isAuthenticated) {
+                                                navigate('/login');
+                                                return;
+                                            }
+                                            // TODO: Handle notification subscription
+                                            console.log('Subscribe to notifications for station:', stationId);
+                                            setShowImagePopup(true);
+                                        }}
+                                        className="p-2 rounded-lg hover:bg-blue-100 transition-colors group relative"
+                                        title={isAuthenticated ? "ติดตามการแจ้งเตือน" : "เข้าสู่ระบบเพื่อรับการแจ้งเตือน"}
+                                    >
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="h-6 w-6 text-gray-600 group-hover:text-blue-600 transition-colors"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth={2}
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
                                 <div className="h-96">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart
@@ -421,6 +460,28 @@ const SectionDetail = () => {
             )}
 
             <Footer />
+
+            {/* Image Popup */}
+            {showImagePopup && (
+                <div className="fixed inset-0 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-4 max-w-4xl max-h-[90vh] relative border border-gray-300 shadow-lg">
+                        <button
+                            onClick={() => setShowImagePopup(false)}
+                            className="absolute top-2 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                        >
+                            ×
+                        </button>
+                        <div className="bg-blue-100 border border-blue-300 text-blue-800 rounded-lg p-4 text-center shadow-md">
+                            <span className="font-semibold text-lg">ระบบ Notification ผ่านไลน์ ใช้ได้เฉพาะจังหวัดปทุมธานี</span>
+                        </div>
+                        <img
+                            src="http://localhost:8080/images/2a71f6d4020d47e9a3d5152be698efd8.png"
+                            alt="Notification Image"
+                            className="max-w-full max-h-full object-contain mx-auto"
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
