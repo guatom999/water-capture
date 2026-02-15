@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { LoginResponse } from '../types/auth';
 
-const API_URL = 'http://localhost:8080';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export const authService = {
     login: async (email: string, password: string): Promise<LoginResponse> => {

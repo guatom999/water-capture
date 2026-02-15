@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMap, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Popup, GeoJSON, useMap, CircleMarker } from 'react-leaflet';
 import { Link } from 'react-router-dom';
 import type { Layer, LeafletMouseEvent } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
